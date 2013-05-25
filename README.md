@@ -23,7 +23,7 @@ anyway, I think single process will be ok in production environment with supervi
 
 ## Maybe is a bug
 
-I disable gevent subprocess monkey patch because I found the execute command function can not exit as I expect, is anyone can test it?
+I disable gevent subprocess monkey patch because I found the execute command function can not exit as I expect, can anyone test it?
 
 ## Thanks
 
