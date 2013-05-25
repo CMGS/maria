@@ -50,8 +50,6 @@ class Gerver(paramiko.ServerInterface):
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 
         while True:
-            import time
-            time.sleep(10)
             r_ready, w_ready, x_ready = select.select(
                     [channel, p.stdout, ], [channel, p.stdin, ], [], \
                     config.SELECT_TIMEOUT)
