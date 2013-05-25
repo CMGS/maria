@@ -16,7 +16,7 @@ You can install requirements from requirements.txt with ``pip install -r require
 
 ## Run it
 
-``python run.py`` will start Maria System, you can specify host and port by yourself like--
+``python run.py`` will start Maria System, you can specify host and port by yourself like  
 ``python run.py -p 22 --host 0.0.0.0``, default port is 2200.
 
 anyway, I think single process will be ok in production environment with supervisord or something like that.
@@ -27,6 +27,6 @@ I disable gevent subprocess monkey patch because I found the execute command fun
 
 ## Thanks
 
-[gevent https://github.com/surfly/gevent/](https://github.com/surfly/gevent/)--
-[paramiko https://github.com/paramiko/paramiko/](https://github.com/paramiko/paramiko/)--
+[gevent https://github.com/surfly/gevent/](https://github.com/surfly/gevent/)  
+[paramiko https://github.com/paramiko/paramiko/](https://github.com/paramiko/paramiko/)  
 
