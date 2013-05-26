@@ -57,12 +57,12 @@ def main():
         logger.info('Maria System Stopped')
 
 def init_log():
+    logging.StreamHandler = ColorizingStreamHandler
     level = logging.DEBUG
     if not config.debug:
         level = logging.INFO
     logging.BASIC_FORMAT = "%(asctime)s [%(name)s] %(message)s"
     logging.basicConfig(level=level)
-    logging.StreamHandler = ColorizingStreamHandler
     paramiko.util.log_to_file(config.log_file, level=level)
 
 if __name__ == '__main__':
