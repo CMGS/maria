@@ -11,7 +11,7 @@ class Config(object):
         self.select_timeout = 10
         self.host = "0.0.0.0"
         self.port = 2200
-        self.config_file = ""
+        self.hook = ""
         self.worker = "maria.gerver.Gerver"
 
     def parser(self, args):

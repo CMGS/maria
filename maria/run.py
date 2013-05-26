@@ -23,8 +23,8 @@ def populate_argument_parser(parser):
                         help="host")
     parser.add_argument("-w", "--worker", default="maria.gerver.Gerver", dest="worker", \
                         help="worker define")
-    parser.add_argument("-c", "--config", default="", dest="config", \
-                        help="The path to a maria config file.")
+    parser.add_argument("-c", "--hook", default="", dest="hook", \
+                        help="The path to a maria hook file.")
     parser.add_argument("--debug", default=False, dest="debug", action="store_true", \
                         help="debug")
     parser.add_argument("--host-key", default="host.key", dest="host_key", \
@@ -45,6 +45,8 @@ def main():
 
     config.parser(args)
     init_log()
+    # init hook file
+    from maria import hook
     config.host_key = paramiko.RSAKey(filename=config.host_key)
     config.worker = load_class(config.worker)
 

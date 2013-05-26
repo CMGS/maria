@@ -8,6 +8,7 @@ import subprocess
 
 import paramiko
 
+from maria import hook
 from maria import utils
 from maria.config import config
 
@@ -17,7 +18,7 @@ class Gerver(paramiko.ServerInterface):
 
     def __init__(self):
         self.command = None
-        self.hex_fingerprint = None
+        self.key = None
         self.event = threading.Event()
 
     def get_allowed_auths(self, username):
@@ -31,15 +32,15 @@ class Gerver(paramiko.ServerInterface):
     def check_auth_publickey(self, username, key):
         hex_fingerprint = utils.hex_key(key)
         logger.info('Auth attempt with key: %s' % hex_fingerprint)
-        if (username == 'git') and utils.check_store_key(hex_fingerprint):
-            self.hex_fingerprint = hex_fingerprint
+        if (username == 'git') and hook.check_store_key(key):
+            self.key = key
             return paramiko.AUTH_SUCCESSFUL
         return paramiko.AUTH_FAILED
 
     def check_channel_exec_request(self, channel, command):
         logger.info('Command %s received' % command)
-        command, repo = utils.parser_command(command)
-        if not utils.check_command(command[0]) or not utils.check_permits(self.hex_fingerprint, repo):
+        command, repo = hook.parser_command(command)
+        if not hook.check_command(command[0]) or not hook.check_permits(self.key, repo):
             self.event.set()
             return False
         self.command = command
