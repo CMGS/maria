@@ -6,9 +6,10 @@ import logging
 import threading
 import subprocess
 
-import utils
-import config
 import paramiko
+
+from maria import utils
+from maria.config import config
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +53,7 @@ class Gerver(paramiko.ServerInterface):
         while True:
             r_ready, w_ready, x_ready = select.select(
                     [channel, p.stdout, ], [channel, p.stdin, ], [], \
-                    config.SELECT_TIMEOUT)
+                    config.select_timeout)
 
             if channel in r_ready and p.stdin in w_ready:
                 data = channel.recv(8)

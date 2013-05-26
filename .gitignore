@@ -1,3 +1,5 @@
 *.pyc
 venv
 local_config.py
+build
+*egg-info/

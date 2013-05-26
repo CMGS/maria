@@ -2,16 +2,12 @@
 #coding:utf-8
 
 import logging
-from binascii import hexlify
 
-import config
 import paramiko
 
-from gerver import Gerver
+from maria.config import config
 
 logger = logging.getLogger(__name__)
-
-logger.info('Host Key %s' % hexlify(config.HOST_KEY.get_fingerprint()))
 
 def handle(socket, address):
     client = None
@@ -23,8 +19,8 @@ def handle(socket, address):
             logger.exception('Failed to load moduli -- gex will be unsupported.')
             raise
 
-        client.add_server_key(config.HOST_KEY)
-        server = Gerver()
+        client.add_server_key(config.host_key)
+        server = config.worker()
         try:
             client.start_server(server=server)
         except paramiko.SSHException:
@@ -47,14 +43,14 @@ def handle(socket, address):
         return
 
 def auth(client, address):
-    channel = client.accept(config.AUTH_TIMEOUT)
+    channel = client.accept(config.auth_timeout)
     if channel is None:
         logger.info('Auth timeout %s' % address)
         return None
     return channel
 
 def check_command(server, address):
-    if not server.event.wait(config.CHECK_TIMEOUT):
+    if not server.event.wait(config.check_timeout):
         logger.info('Check timeout %s' % address)
         return False
     return True
