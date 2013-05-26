@@ -1,6 +1,7 @@
 #!/usr/local/bin/python2.7
 #coding:utf-8
 
+import os
 import select
 import logging
 import threading
@@ -51,18 +52,20 @@ class Gerver(paramiko.ServerInterface):
         p = subprocess.Popen(self.command, \
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 
+        ofd = p.stdout.fileno()
+
         while True:
             r_ready, w_ready, x_ready = select.select(
-                    [channel, p.stdout, ], [channel, p.stdin, ], [], \
+                    [channel, ofd, ], [channel, p.stdin, ], [], \
                     config.select_timeout)
 
             if channel in r_ready and p.stdin in w_ready:
-                data = channel.recv(8)
+                data = channel.recv(10240)
                 if data:
                     p.stdin.write(data)
 
-            if channel in w_ready and p.stdout in r_ready:
-                data = p.stdout.read(1)
+            if channel in w_ready and ofd in r_ready:
+                data = os.read(ofd, 10240)
                 if not data:
                     break
                 channel.sendall(data)
