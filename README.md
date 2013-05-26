@@ -16,9 +16,15 @@ You can install requirements from requirements.txt with ``pip install -r require
 
 ## Run it
 
-``python run.py`` will start Maria System, you can specify host and port by yourself like  
-``python run.py -p 22 --host 0.0.0.0``, default port is 2200.
+Firstly, you have to install requirements and maria itself in your python environment like:  
+```bash
+pip install -r requirements
+python setup.py develop
+```
 
+Then, you can find example in examples dir. In simple case, ``run-maria`` will start Maria System.  
+You also can specify options by yourself like ``run-maria --debug`` or ``run-maria -p 22 --host 0.0.0.0``.  
+Get options define please use this command ``run-maria -h``.  
 anyway, I think single process will be ok in production environment with supervisord or something like that.
 
 ## Maybe is a bug
