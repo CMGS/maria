@@ -24,8 +24,10 @@ python setup.py develop
 
 Then, you can find example in examples dir. In simple case, ``run-maria`` will start Maria System.  
 You also can specify options by yourself like ``run-maria --debug`` or ``run-maria -p 22 --host 0.0.0.0``.  
-Get options define please use this command ``run-maria -h``.  
-anyway, I think single process will be ok in production environment with supervisord or something like that.
+Get options define please use this command ``run-maria -h``.
+
+You can find more examples in examples dir, use ``run-maria --hook hook_example.py --host-key host.key`` can run all examples.  
+Anyway, I think single process will be ok in production environment with supervisord or something like that.
 
 ## Maybe is a bug
 
