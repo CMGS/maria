@@ -60,12 +60,12 @@ class Gerver(paramiko.ServerInterface):
                     config.select_timeout)
 
             if channel in r_ready and p.stdin in w_ready:
-                data = channel.recv(10240)
+                data = channel.recv(16384)
                 if data:
                     p.stdin.write(data)
 
             if channel in w_ready and ofd in r_ready:
-                data = os.read(ofd, 10240)
+                data = os.read(ofd, 16384)
                 if not data:
                     break
                 channel.sendall(data)
