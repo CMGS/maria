@@ -1,8 +1,8 @@
 #!/usr/local/bin/python2.7
 #coding:utf-8
 
-from binascii import hexlify
+from paramiko.util import hexify
 
 def hex_key(key):
-    return hexlify(key.get_fingerprint())
+    return hexify(key.get_fingerprint())
 
