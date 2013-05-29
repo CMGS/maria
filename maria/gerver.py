@@ -53,25 +53,39 @@ class Gerver(paramiko.ServerInterface):
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 
         ofd = p.stdout.fileno()
+        efd = p.stderr.fileno()
 
         while True:
             r_ready, w_ready, x_ready = select.select(
-                    [channel, ofd, ], [channel, p.stdin, ], [], \
+                    [channel, ofd, efd], [], [], \
                     config.select_timeout)
 
-            if channel in r_ready and p.stdin in w_ready:
+            if channel in r_ready and channel.recv_ready():
                 data = channel.recv(16384)
                 if data:
                     p.stdin.write(data)
 
-            if channel in w_ready and ofd in r_ready:
+            if ofd in r_ready:
                 data = os.read(ofd, 16384)
                 if not data:
                     break
                 channel.sendall(data)
 
-        logger.info('Command execute finished')
-        retcode = p.wait()
-        channel.send_exit_status(retcode)
+            if efd in r_ready:
+                data = os.read(efd, 16384)
+                channel.sendall(data)
+                break
+
+            if channel.eof_received:
+                break
+
+        output, err = p.communicate()
+        if output:
+            channel.sendall(output)
+        if err:
+            channel.sendall(err)
+        channel.send_exit_status(p.returncode)
+        channel.shutdown(2)
         channel.close()
+        logger.info('Command execute finished')
 
