@@ -43,12 +43,14 @@ class Gerver(paramiko.ServerInterface):
         command, repo = hook.parser_command(command)
         if not hook.check_command(command[0]) or not hook.check_permits(self.key, repo):
             self.event.set()
-            return False
+            return paramiko.AUTH_FAILED
         self.command = command
         self.event.set()
-        return True
+        return paramiko.AUTH_SUCCESSFUL
 
     def main_loop(self, channel):
+        if not self.command:
+            return
         p = subprocess.Popen(self.command, \
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 
