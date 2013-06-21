@@ -51,7 +51,7 @@ def auth(client, address):
 
 def check_command(server, address):
     if not server.event.wait(config.check_timeout):
-        logger.info('Check timeout %s' % address)
+        logger.info('Check timeout %s:%d' % address)
         return False
     return True
 
