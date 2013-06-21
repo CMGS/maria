@@ -45,7 +45,7 @@ def handle(socket, address):
 def auth(client, address):
     channel = client.accept(config.auth_timeout)
     if channel is None:
-        logger.info('Auth timeout %s' % address)
+        logger.info('Auth timeout %s:%d' % address)
         return None
     return channel
 
