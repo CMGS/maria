@@ -46,7 +46,7 @@ class Gerver(paramiko.ServerInterface):
             return paramiko.AUTH_FAILED
         self.command = command
         self.event.set()
-        return paramiko.AUTH_SUCCESSFUL
+        return True
 
     def main_loop(self, channel):
         if not self.command:
