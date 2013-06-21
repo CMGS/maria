@@ -30,6 +30,12 @@ def check_store_key(key):
         return True
     return False
 
+# TODO get from mysql
+def check_username(username):
+    if username == 'git':
+        return True
+    return False
+
 # TODO check repo and user permits
 def check_permits(key, repo):
     if not key or not repo:

@@ -33,7 +33,7 @@ class Gerver(paramiko.ServerInterface):
     def check_auth_publickey(self, username, key):
         hex_fingerprint = utils.hex_key(key)
         logger.info('Auth attempt with key: %s' % hex_fingerprint)
-        if (username == 'git') and hook.check_store_key(key):
+        if hook.check_username(username) and hook.check_store_key(key):
             self.key = key
             return paramiko.AUTH_SUCCESSFUL
         return paramiko.AUTH_FAILED
