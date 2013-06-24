@@ -64,7 +64,7 @@ class Gerver(paramiko.ServerInterface):
 
             if channel in r_ready:
                 data = channel.recv(16384)
-                if not data and channel.eof_received:
+                if not data and (channel.closed or channel.eof_received):
                     break
                 p.stdin.write(data)
 
