@@ -1,6 +1,7 @@
 #!/usr/local/bin/python2.7
 #coding:utf-8
 
+import os
 import logging
 
 logger = logging.getLogger(__name__)
@@ -9,9 +10,8 @@ logger = logging.getLogger(__name__)
 def parser_command(command):
     if not command:
         return None
-    repo = 'test.git'
     command = command.split(' ')
-    command[-1] = command[-1].strip("'")
+    repo = command[-1] = command[-1].strip("'")
     return command, repo
 
 # TODO define by yourself
@@ -33,3 +33,7 @@ def check_permits(key, repo):
     if not key or not repo:
         return False
     return True
+
+def check_exisit(repo):
+    return os.path.exists(repo)
+

@@ -43,7 +43,11 @@ class Gerver(paramiko.ServerInterface):
         command, repo = hook.parser_command(command)
         if not hook.check_command(command[0]) or not hook.check_permits(self.key, repo):
             self.event.set()
-            return paramiko.AUTH_FAILED
+            return False
+        if not hook.check_exisit(repo):
+            channel.sendall_stderr('Error: Repository not found.\n')
+            self.event.set()
+            return True
         self.command = command
         self.event.set()
         return True
