@@ -2,7 +2,7 @@
 #coding:utf-8
 
 from gevent.monkey import patch_all
-patch_all()
+patch_all(aggressive=False)
 import logging
 import argparse
 import paramiko
