@@ -87,7 +87,7 @@ class Gerver(paramiko.ServerInterface):
         if output:
             channel.sendall(output)
         if err:
-            channel.sendall(err)
+            channel.sendall_stderr(err)
         channel.send_exit_status(p.returncode)
         channel.shutdown(2)
         channel.close()
