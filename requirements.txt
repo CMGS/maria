@@ -1,5 +1,5 @@
-gevent==1.0rc1
+-e git://github.com/surfly/gevent.git#egg=gevent
 greenlet==0.4.0
--e git://github.com/paramiko/paramiko.git@d77a4d6421a726584da228c30587bfa265fee8ea#egg=paramiko-dev
+-e git://github.com/paramiko/paramiko.git#egg=paramiko-dev
 pycrypto==2.6
 wsgiref==0.1.2
