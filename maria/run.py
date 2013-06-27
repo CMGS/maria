@@ -1,12 +1,16 @@
 #!/usr/local/bin/python2.7
 #coding:utf-8
 
-from gevent.monkey import patch_all
-patch_all(aggressive=False)
+try:
+    from gevent.monkey import patch_all
+    patch_all(subprocess=False, aggressive=False)
+    from gevent.server import StreamServer
+except ImportError:
+    print 'You need install gevent manually! System shutdown.'
+
 import logging
 import argparse
 import paramiko
-from gevent.server import StreamServer
 
 from maria.config import config
 from maria.utils import hex_key
