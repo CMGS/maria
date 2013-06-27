@@ -23,7 +23,7 @@ run-maria = maria.run:main
 """
 
 # dependencies
-INSTALL_REQUIRES = ['gevent',]
+INSTALL_REQUIRES = []
 
 here = os.path.abspath(os.path.dirname(__file__))
 
