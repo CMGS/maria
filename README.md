@@ -29,7 +29,7 @@ And ``run-maria --hook hook_example.py --host-key host.key`` will start maria sy
 
 Anyway, I think single process will be ok in production environment with supervisord or something like that.  
 
-## Maybe is a bug
+## Maybe a bug
 
 I disable gevent subprocess monkey patch because I found the execute command function can not exit as I expect, can anyone test it?
 
