@@ -14,6 +14,11 @@ class Config(object):
         self.hook = ""
         self.worker = "maria.gerver.Gerver"
 
+        self.http_config= {"upload_pack": True,
+                           "receive_pack": True,
+                           "git_path": "/Users/xtao/gentoo/usr/bin/git",
+                           "project_root": "/Users/xtao/Work/code"}
+
     def parser(self, args):
         for key in dir(args):
             if key.startswith('_'):

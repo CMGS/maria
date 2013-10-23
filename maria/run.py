@@ -5,6 +5,7 @@ try:
     from gevent.monkey import patch_all
     patch_all(subprocess=False, aggressive=False)
     from gevent.server import StreamServer
+    from gevent.pywsgi import WSGIServer
 except ImportError:
     print 'You need install gevent manually! System shutdown.'
 
@@ -15,6 +16,7 @@ import paramiko
 from maria.config import config
 from maria.utils import hex_key
 from maria.handler import handle
+from maria.ghttp import GHTTPServer
 from maria.libs.loader import load_class
 from maria.libs.colorlog import ColorizingStreamHandler
 
@@ -51,13 +53,17 @@ def main():
     init_log()
     # init hook file
     from maria import hook
-    config.host_key = paramiko.RSAKey(filename=config.host_key)
+
+    if config.worker == "maria.gerver.Gerver":
+        config.host_key = paramiko.RSAKey(filename=config.host_key)
+        logger.info('Host Key %s' % hex_key(config.host_key))
+        server = StreamServer((args.host, args.port), handle)
+    else:
+        server = WSGIServer((args.host, args.port), GHTTPServer(config.http_config))
     config.worker = load_class(config.worker)
 
-    server = StreamServer((args.host, args.port), handle)
     try:
         logger.info('Maria System Start at %s:%d' % (config.host, config.port))
-        logger.info('Host Key %s' % hex_key(config.host_key))
         server.serve_forever()
     except KeyboardInterrupt:
         logger.info('Maria System Stopped')
