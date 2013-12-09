@@ -5,7 +5,7 @@ import inspect
 import traceback
 import pkg_resources
 
-def load_class(uri, default="Gerver", section="maria.gerver"):
+def load_class(uri, default="GSSHServer", section="maria.gssh"):
     if inspect.isclass(uri):
         return uri
     if uri.startswith("egg:"):

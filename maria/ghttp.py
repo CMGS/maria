@@ -68,7 +68,7 @@ class GHTTPServer(object):
     def __init__(self, config=None):
         self.headers = {}
         self.set_config(config)
-        self.git = Git("/Users/xtao/gentoo/usr/bin/git")
+        self.git = Git(config.git_path)
         self.RE_SERVICES = []
 
     def set_config(self, config):
@@ -275,6 +275,12 @@ class GHTTPServer(object):
         self.headers["Content-Type"] = "text/plain"
         return ["Forbidden"]
 
+    def render_no_authorization(self):
+        self.status = "401"
+        self.headers["Content-Type"] = "text/plain"
+        self.headers["WWW-Authenticate"] = "Basic realm=Protected"
+        return ["Unauthorized"]
+
     def has_access(self, rpc, check_content_type=False):
         if check_content_type:
             if self.env["CONTENT_TYPE"] != "application/x-git-%s-request" % rpc:
@@ -317,3 +323,19 @@ class GHTTPServer(object):
         checkpath = checkpath.replace("\/+$",'')
         if re.match("^%s(\/|$)" % checkpath, path):
            return True
+
+
+class GHTTPInterface(object):
+
+    def __init__(self):
+        # repo
+        # username
+        # password
+        # command
+        pass
+
+    def check_user(self):
+        pass
+
+    def check_command(self):
+        pass

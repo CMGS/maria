@@ -27,7 +27,7 @@ def populate_argument_parser(parser):
                         help="port number")
     parser.add_argument("--host", default="0.0.0.0", dest="host", \
                         help="host")
-    parser.add_argument("-w", "--worker", default="maria.gerver.Gerver", dest="worker", \
+    parser.add_argument("-w", "--worker", default="maria.gssh.GSSHServer", dest="worker", \
                         help="worker define")
     parser.add_argument("-c", "--hook", default="", dest="hook", \
                         help="The path to a maria hook file.")
@@ -54,12 +54,17 @@ def main():
     # init hook file
     from maria import hook
 
-    if config.worker == "maria.gerver.Gerver":
+    if config.worker == "maria.gssh.GSSHServer":
         config.host_key = paramiko.RSAKey(filename=config.host_key)
         logger.info('Host Key %s' % hex_key(config.host_key))
         server = StreamServer((args.host, args.port), handle)
     else:
-        server = WSGIServer((args.host, args.port), GHTTPServer(config.http_config))
+        # FIXME: use config directly
+        http_config = dict(upload_pack=True,
+                           receive_pack=True,
+                           git_path=config.git_path,
+                           project_root=config.repo_root_path)
+        server = WSGIServer((args.host, args.port), GHTTPServer(http_config))
     config.worker = load_class(config.worker)
 
     try:

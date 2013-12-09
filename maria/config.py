@@ -12,12 +12,12 @@ class Config(object):
         self.host = "0.0.0.0"
         self.port = 2200
         self.hook = ""
+        # TODO:
+        # maria.gssh.GSSHServer
+        # maria.ghttp.GHTTPServer
         self.worker = "maria.gerver.Gerver"
-
-        self.http_config= {"upload_pack": True,
-                           "receive_pack": True,
-                           "git_path": "/Users/xtao/gentoo/usr/bin/git",
-                           "project_root": "/Users/xtao/Work/code"}
+        self.git_path = "git"
+        self.repo_root_path = "./"
 
     def parser(self, args):
         for key in dir(args):
