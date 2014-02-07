@@ -15,7 +15,7 @@ class Config(object):
         # TODO:
         # maria.gssh.GSSHServer
         # maria.ghttp.GHTTPServer
-        self.worker = "maria.gerver.Gerver"
+        self.worker = "maria.gssh.GSSHServer"
         self.git_path = "git"
         self.repo_root_path = "./"
 

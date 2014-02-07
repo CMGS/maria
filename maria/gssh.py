@@ -6,21 +6,22 @@ import select
 import logging
 import threading
 import subprocess
-
 import paramiko
-
 from maria import hook
 from maria import utils
 from maria.config import config
 
 logger = logging.getLogger(__name__)
 
-class Gerver(paramiko.ServerInterface):
 
-    def __init__(self):
+class GSSHServer(paramiko.ServerInterface):
+
+    def __init__(self, interface=None):
         self.command = None
         self.key = None
         self.event = threading.Event()
+        self.git_env = None
+        self.interface = interface or GSSHInterface()
 
     def get_allowed_auths(self, username):
         return 'publickey'
@@ -33,6 +34,10 @@ class Gerver(paramiko.ServerInterface):
     def check_auth_publickey(self, username, key):
         hex_fingerprint = utils.hex_key(key)
         logger.info('Auth attempt with key: %s' % hex_fingerprint)
+        if not self.interface.check_user(username):
+            return paramiko.AUTH_SUCCESSFUL
+        if not self.interface.check_user_key(key):
+            return paramiko.AUTH_SUCCESSFUL
         if hook.check_username(username) and hook.check_store_key(key):
             self.key = key
             return paramiko.AUTH_SUCCESSFUL
@@ -41,6 +46,12 @@ class Gerver(paramiko.ServerInterface):
     def check_channel_exec_request(self, channel, command):
         logger.info('Command %s received' % command)
         command, repo = hook.parser_command(command)
+        if not self.interface.check_repo(repo):
+            self.event.set()
+            return False
+        if not self.interface.check_command(command):
+            self.event.set()
+            return False
         if not hook.check_command(command[0]) or not hook.check_permits(self.key, repo):
             self.event.set()
             return False
@@ -55,8 +66,9 @@ class Gerver(paramiko.ServerInterface):
     def main_loop(self, channel):
         if not self.command:
             return
+        self.git_env = self.interface.get_env()
         p = subprocess.Popen(self.command, \
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, env=self.git_env)
 
         ofd = p.stdout.fileno()
         efd = p.stderr.fileno()
@@ -92,4 +104,25 @@ class Gerver(paramiko.ServerInterface):
         channel.shutdown(2)
         channel.close()
         logger.info('Command execute finished')
+
+
+class GSSHInterface(object):
+
+    def __init__(self):
+        pass
+
+    def check_user(self, name):
+        return hook.check_username(name)
+
+    def check_user_key(self, key):
+        return hook.check_store_key(key)
+
+    def check_repo(self, repo):
+        return hook.check_permits(key, repo)
+
+    def check_command(self, command):
+        return hook.check_command(command)
+
+    def get_env():
+        return None
 

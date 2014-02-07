@@ -23,28 +23,25 @@ class Git(object):
     def command_options(self):
         return {"advertise_refs": "--advertise-refs"}
 
-    def command(self, cmd, opts={}, callback=None):
+    def command(self, cmd, opts={}, callback=None, env=None):
         cmd = "%s %s %s" % (self.git_path, cmd, " ".join(opts.get("args")))
         cmd = shlex.split(cmd)
+        p = subprocess.Popen(cmd,
+                                stdin=subprocess.PIPE,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE,
+                                close_fds=True,
+                                env=env)
         if callback:
-            p = subprocess.Popen(cmd,
-                                 stdin=subprocess.PIPE,
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.PIPE,
-                                 close_fds=True)
             data = opts.get("msg")
             if data:
                 p.stdin.write(data)
             return callback(p)
-        else:
-            try:
-                result = subprocess.check_output(cmd)
-            except subprocess.CalledProcessError:
-                result = None
-            return result
+        result, err = p.communicate()
+        return result
 
 
-    def upload_pack(self, repository_path, opts=None, callback=None):
+    def upload_pack(self, repository_path, opts=None, callback=None, env=None):
         cmd = "upload-pack"
         args = []
         if not opts:
@@ -55,9 +52,9 @@ class Git(object):
         args.append("--stateless-rpc")
         args.append(repository_path)
         opts["args"] = args
-        return self.command(cmd, opts, callback)
+        return self.command(cmd, opts, callback, env=env)
 
-    def receive_pack(self, repository_path, opts=None, callback=None):
+    def receive_pack(self, repository_path, opts=None, callback=None, env=None):
         cmd = "receive-pack"
         args = []
         if not opts:
@@ -68,9 +65,9 @@ class Git(object):
         args.append("--stateless-rpc")
         args.append(repository_path)
         opts["args"] = args
-        return self.command(cmd, opts, callback)
+        return self.command(cmd, opts, callback, env=env)
 
-    def update_server_info(self, repository_path, opts=None, callback=None):
+    def update_server_info(self, repository_path, opts=None, callback=None, env=None):
         cmd = "update-server-info"
         args = []
         if not opts:
@@ -80,7 +77,7 @@ class Git(object):
                 args.append(self.command_options.get(k))
         opts["args"] = args
         with chdir(repository_path):
-            self.command(cmd, opts, callback)
+            self.command(cmd, opts, callback, env=env)
 
     def get_config_setting(self, repository_path, key):
         path = self.get_config_location(repository_path)

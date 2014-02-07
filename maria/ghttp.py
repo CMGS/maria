@@ -1,11 +1,15 @@
+#!/usr/local/bin/python2.7
+#coding:utf-8
+
+import os
 import re
 import time
-import os
 import select
 from os import access
 from os.path import join, exists, getmtime, getsize
 from urllib import unquote
 from libs.git import Git
+from libs.auth import decode, DecodeError
 
 
 # Weekday and month names for HTTP date/time formatting; always English!
@@ -65,11 +69,12 @@ class GHTTPServer(object):
       ["GET",  'get_idx_file',     re.compile("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.idx$")],
     ]
 
-    def __init__(self, config=None):
+    def __init__(self, config=None, interface=None):
         self.headers = {}
         self.set_config(config)
         self.git = Git(config.git_path)
-        self.RE_SERVICES = []
+        interface = interface if interface else GHTTPInterface
+        self.interface = interface()
 
     def set_config(self, config):
         self.config = config or {}
@@ -83,11 +88,44 @@ class GHTTPServer(object):
         start_response(self.status, self.headers.items())
         return body
 
+    def check_auth(self):
+        authorization = self.env.get('HTTP_AUTHORIZATION')
+        if not authorization:
+            return True
+        try:
+            username, password = decode(authorization)
+        except DecodeError:
+            return None
+        if not self.interface.check_user(username):
+            return None
+        if not self.interface.check_user_pass(password):
+            return None
+        return True
+
+    def check_repo(self, path):
+        if self.interface.check_repo(path):
+            return True
+
+    def check_command(self, cmd, rpc):
+        if cmd == 'service_rpc':
+            command = rpc
+        else:
+            command = cmd
+        if self.interface.check_command(command):
+            return True
+
     def call(self):
+        if not self.check_auth():
+            return self.render_no_authorization()
         match = self.match_routing(self.env["PATH_INFO"].lstrip('/'), self.env["REQUEST_METHOD"])
         if not match:
             return self.render_not_found()
         cmd, path, reqfile, rpc = match
+        if not self.check_repo(path):
+            return self.render_no_access()
+        if not self.check_command(cmd, rpc):
+            return self.render_no_access()
+        self.git_env = self.interface.get_env()
         self.rpc = rpc
         self.reqfile = reqfile
         if cmd == "not_allowed":
@@ -105,13 +143,13 @@ class GHTTPServer(object):
         git_cmd = "upload_pack" if self.rpc == "upload-pack" else "receive_pack"
         self.status = "200"
         self.headers["Content-Type"] = "application/x-git-%s-result" % self.rpc
-        return getattr(self.git, git_cmd)(self.dir, {"msg": input}, callback)
+        return getattr(self.git, git_cmd)(self.dir, {"msg": input}, callback, env=self.git_env)
 
     def get_info_refs(self):
         service_name = self.get_service_type()
         if self.has_access(service_name):
             git_cmd = "upload_pack" if service_name == "upload-pack" else "receive_pack"
-            refs = getattr(self.git, git_cmd)(self.dir, {"advertise_refs": True})
+            refs = getattr(self.git, git_cmd)(self.dir, {"advertise_refs": True}, env=self.git_env)
             self.status = "200"
             self.headers["Content-Type"] = "application/x-git-%s-advertisement" % service_name
             self.hdr_nocache()
@@ -334,8 +372,26 @@ class GHTTPInterface(object):
         # command
         pass
 
-    def check_user(self):
-        pass
+    def check_user(self, user):
+        return True
 
-    def check_command(self):
-        pass
+    def check_user_pass(self, password):
+        return True
+
+    def check_repo(self, repo):
+        return True
+
+    def check_command(self, cmd):
+        # upload-pack
+        # receive-pack
+        # get_info_refs
+        # get_text_file
+        # get_info_packs
+        # get_loose_object
+        # get_pack_file
+        # get_idx_file
+        return True
+
+    def get_env(self):
+        return None
+
