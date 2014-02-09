@@ -68,12 +68,7 @@ def main():
         logger.info('Host Key %s' % hex_key(config.host_key))
         server = StreamServer((args.host, args.port), handle)
     else:
-        # FIXME: use config directly
-        http_config = dict(upload_pack=True,
-                           receive_pack=True,
-                           git_path=config.git_path,
-                           project_root=config.repo_root_path)
-        server = WSGIServer((args.host, args.port), GHTTPServer(http_config))
+        server = WSGIServer((args.host, args.port), GHTTPServer())
     config.worker = load_class(config.worker)
     config.gssh_interface = load_class(config.gssh_interface)
     config.ghttp_interface = load_class(config.ghttp_interface)

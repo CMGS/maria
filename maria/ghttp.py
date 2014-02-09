@@ -8,10 +8,10 @@ import select
 from os import access
 from os.path import join, exists, getmtime, getsize
 from urllib import unquote
-from libs.date import format_date_time
-from libs.git import Git
-from libs.auth import decode, DecodeError
-from maria.config import config as _config
+from maria.libs.date import format_date_time
+from maria.libs.git import Git
+from maria.libs.auth import decode, DecodeError
+from maria.config import config
 
 
 def callback(p):
@@ -81,20 +81,15 @@ class GHTTPServer(object):
          re.compile("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.idx$")],
     ]
 
-    def __init__(self, config=None):
+    def __init__(self):
         self.headers = {}
-        self.set_config(config)
+        self.interface = None
         self.git = Git(config.git_path)
-        self.interface = _config.ghttp_interface()
-
-    def set_config(self, config):
-        self.config = config or {}
-
-    def set_config_setting(self, key, value):
-        self.config[key] = value
 
     def __call__(self, environ, start_response):
+        self.headers = {}
         self.env = environ
+        self.interface = config.ghttp_interface()
         body = self.call()
         start_response(self.status, self.headers.items())
         return body
@@ -356,12 +351,6 @@ class GHTTPServer(object):
                 return False
         if rpc not in self.VALID_SERVICE_TYPES:
             return False
-        if rpc == 'receive-pack':
-            if "receive_pack" in self.config:
-                return self.config.get("receive_pack")
-        if rpc == 'upload-pack':
-            if "upload_pack" in self.config:
-                return self.config.get("upload_pack")
         return self.get_config_setting(rpc)
 
     def get_config_setting(self, service_name):
@@ -383,7 +372,7 @@ class GHTTPServer(object):
         return False
 
     def get_project_root(self):
-        root = self.config.get("project_root") or os.getcwd()
+        root = config.repos_path or os.getcwd()
         return root
 
     def is_subpath(self, path, checkpath):

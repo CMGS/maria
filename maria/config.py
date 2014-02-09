@@ -19,7 +19,7 @@ class Config(object):
         # maria.ghttp.GHTTPServer
         self.worker = "maria.gssh.GSSHServer"
         self.git_path = "git"
-        self.repo_root_path = "./"
+        self.repos_path = ""
 
         self.gssh_interface = "maria.gssh.GSSHInterface"
         self.ghttp_interface = "maria.ghttp.GHTTPInterface"
