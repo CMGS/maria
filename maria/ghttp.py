@@ -8,23 +8,10 @@ import select
 from os import access
 from os.path import join, exists, getmtime, getsize
 from urllib import unquote
+from libs.date import format_date_time
 from libs.git import Git
 from libs.auth import decode, DecodeError
 from maria.config import config as _config
-
-
-# Weekday and month names for HTTP date/time formatting; always English!
-_weekdayname = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-_monthname = [None,  # Dummy so we can use 1-based month numbers
-              "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-              "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-
-
-def format_date_time(timestamp):
-    year, month, day, hh, mm, ss, wd, y, z = time.gmtime(timestamp)
-    return "%s, %02d %3s %4d %02d:%02d:%02d GMT" % (
-        _weekdayname[wd], day, _monthname[month], year, hh, mm, ss
-    )
 
 
 def callback(p):
@@ -412,19 +399,21 @@ class GHTTPInterface(object):
 
     def __init__(self):
         self.message = ''
-        # repo
-        # username
-        # password
-        # command
-        pass
+        self.username = ''
+        self.password = ''
+        self.repo = ''
+        self.command = ''
 
-    def check_user(self, user):
+    def check_user(self, name):
+        self.username = name
         return True
 
     def check_password(self, password):
+        self.password = password
         return True
 
     def check_repo(self, repo):
+        self.repo = repo
         return True
 
     def check_command(self, cmd):
@@ -436,10 +425,11 @@ class GHTTPInterface(object):
         # get_loose_object
         # get_pack_file
         # get_idx_file
+        self.command = cmd
         return True
 
     def get_env(self):
-        return {}
+        return None
 
     def get_repo_path(self):
         return None

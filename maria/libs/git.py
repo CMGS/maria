@@ -27,11 +27,11 @@ class Git(object):
         cmd = "%s %s %s" % (self.git_path, cmd, " ".join(opts.get("args")))
         cmd = shlex.split(cmd)
         p = subprocess.Popen(cmd,
-                                stdin=subprocess.PIPE,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE,
-                                close_fds=True,
-                                env=env)
+                             stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE,
+                             close_fds=True,
+                             env=env)
         if callback:
             data = opts.get("msg")
             if data:
@@ -39,7 +39,6 @@ class Git(object):
             return callback(p)
         result, err = p.communicate()
         return result
-
 
     def upload_pack(self, repository_path, opts=None, callback=None, env=None):
         cmd = "upload-pack"
@@ -54,7 +53,8 @@ class Git(object):
         opts["args"] = args
         return self.command(cmd, opts, callback, env=env)
 
-    def receive_pack(self, repository_path, opts=None, callback=None, env=None):
+    def receive_pack(self, repository_path, opts=None, callback=None,
+                     env=None):
         cmd = "receive-pack"
         args = []
         if not opts:
@@ -67,7 +67,8 @@ class Git(object):
         opts["args"] = args
         return self.command(cmd, opts, callback, env=env)
 
-    def update_server_info(self, repository_path, opts=None, callback=None, env=None):
+    def update_server_info(self, repository_path, opts=None, callback=None,
+                           env=None):
         cmd = "update-server-info"
         args = []
         if not opts:
@@ -80,6 +81,7 @@ class Git(object):
             self.command(cmd, opts, callback, env=env)
 
     def get_config_setting(self, repository_path, key):
+        # TODO: user pygit2 or ellen
         path = self.get_config_location(repository_path)
         result = self.command("config", {"args": ["-f %s" % path, key]})
         if result:
