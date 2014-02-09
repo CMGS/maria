@@ -22,8 +22,6 @@ class Config(object):
 
         self.gssh_interface = "maria.gssh.GSSHInterface"
         self.ghttp_interface = "maria.ghttp.GHTTPInterface"
-        self.ssh_port = 2200
-        self.http_port = 8000
 
     def parser(self, args):
         for key in dir(args):
