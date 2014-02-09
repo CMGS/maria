@@ -7,7 +7,6 @@ import logging
 import threading
 import subprocess
 import paramiko
-from maria import hook
 from maria import utils
 from maria.config import config
 
@@ -112,6 +111,14 @@ class GSSHServer(paramiko.ServerInterface):
         logger.info('Command execute finished')
 
 
+DATA = 'AAAAB3NzaC1yc2EAAAADAQABAAABAQDJOtsej4dNSKTdMBnD8v6L0lZ1Tk+WTMlx' \
+    'sFf2+pvkdoAu3EB3RZ/frpyV6//bJNTDysyvwgOvANT/K8u5fzrOI2qDZqVU7dtDSwU' \
+    'edM3YSWcSjjuUiec7uNZeimqhEwzYGDcUSSXe7GNH9YsVZuoWEf1du6OLtuXi7iJY4H' \
+    'abU0N49zorXtxmlXcPeGPuJwCiEu8DG/uKQeruI2eQS9zMhy73Jx2O3ii3PMikZt3g/' \
+    'RvxzqIlst7a4fEotcYENtsJF1ZrEm7B3qOBZ+k5N8D3CkDiHPmHwXyMRYIQJnyZp2y0' \
+    '3+1nXT16h75cer/7MZMm+AfWSATdp09/meBt6swD'
+
+
 class GSSHInterface(object):
 
     def __init__(self):
@@ -139,17 +146,25 @@ class GSSHInterface(object):
 
     def check_key(self, key):
         self.key = key
-        return hook.check_store_key(key)
+        key_b = key.get_base64()
+        if DATA == key_b:
+            return True
+        return False
 
     def check_repo(self, repo):
         self.repo = repo
         # 'Error: Repository not found.\n'
         key = self.key
-        return hook.check_permits(key, repo)
+        if not key or not repo:
+            return False
+        return True
 
     def check_command(self, command):
         self.command = command
-        return hook.check_command(command[0])
+        if not command[0] or not command[0] in ('git-receive-pack',
+                                                'git-upload-pack'):
+            return False
+        return True
 
     def get_env(self):
         return None
