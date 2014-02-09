@@ -52,7 +52,9 @@ class GSSHServer(paramiko.ServerInterface):
         if not self.interface.check_command(command):
             self.event.set()
             return False
-        if not hook.check_command(command[0]) or not hook.check_permits(self.key, repo):
+        if not hook.check_command(command[0]) \
+                or not hook.check_permits(self.key,
+                                          repo):
             self.event.set()
             return False
         if not hook.check_exisit(repo):
@@ -66,17 +68,23 @@ class GSSHServer(paramiko.ServerInterface):
     def main_loop(self, channel):
         if not self.command:
             return
+
         self.git_env = self.interface.get_env()
-        p = subprocess.Popen(self.command, \
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, env=self.git_env)
+        p = subprocess.Popen(self.command,
+                             stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE,
+                             close_fds=True,
+                             env=self.git_env)
 
         ofd = p.stdout.fileno()
         efd = p.stderr.fileno()
 
         while True:
-            r_ready, w_ready, x_ready = select.select(
-                    [channel, ofd, efd], [], [], \
-                    config.select_timeout)
+            r_ready, w_ready, x_ready = select.select([channel, ofd, efd],
+                                                      [],
+                                                      [],
+                                                      config.select_timeout)
 
             if channel in r_ready:
                 data = channel.recv(16384)
@@ -125,4 +133,3 @@ class GSSHInterface(object):
 
     def get_env():
         return None
-
