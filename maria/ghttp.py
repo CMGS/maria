@@ -165,7 +165,8 @@ class GHTTPServer(object):
         if not self.has_access(self.rpc, True):
             return self.render_no_access()
         input = self.read_body
-        git_cmd = "upload_pack" if self.rpc == "upload-pack" else "receive_pack"
+        git_cmd = "upload_pack" \
+            if self.rpc == "upload-pack" else "receive_pack"
         self.status = "200"
         self.headers["Content-Type"] = "application/x-git-%s-result" % self.rpc
         return getattr(self.git, git_cmd)(self.dir,
@@ -176,12 +177,14 @@ class GHTTPServer(object):
     def get_info_refs(self):
         service_name = self.get_service_type()
         if self.has_access(service_name):
-            git_cmd = "upload_pack" if service_name == "upload-pack" else "receive_pack"
+            git_cmd = "upload_pack" \
+                if service_name == "upload-pack" else "receive_pack"
             refs = getattr(self.git, git_cmd)(self.dir,
                                               {"advertise_refs": True},
                                               env=self.git_env)
             self.status = "200"
-            self.headers["Content-Type"] = "application/x-git-%s-advertisement" % service_name
+            self.headers["Content-Type"] = \
+                "application/x-git-%s-advertisement" % service_name
             self.hdr_nocache()
 
             def read_file():
@@ -361,7 +364,8 @@ class GHTTPServer(object):
 
     def has_access(self, rpc, check_content_type=False):
         if check_content_type:
-            if self.env["CONTENT_TYPE"] != "application/x-git-%s-request" % rpc:
+            if self.env["CONTENT_TYPE"] \
+                    != "application/x-git-%s-request" % rpc:
                 return False
         if rpc not in self.VALID_SERVICE_TYPES:
             return False
@@ -407,6 +411,7 @@ class GHTTPServer(object):
 class GHTTPInterface(object):
 
     def __init__(self):
+        self.message = ''
         # repo
         # username
         # password
