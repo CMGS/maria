@@ -20,7 +20,6 @@ class GSSHServer(paramiko.ServerInterface):
         self.command = None
         self.key = None
         self.event = threading.Event()
-        self.git_env = None
         self.interface = config.gssh_interface()
 
     def get_allowed_auths(self, username):
@@ -69,13 +68,13 @@ class GSSHServer(paramiko.ServerInterface):
         if not self.command:
             return
 
-        self.git_env = self.interface.get_env()
+        env = self.interface.get_env()
         p = subprocess.Popen(self.command,
                              stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE,
                              close_fds=True,
-                             env=self.git_env)
+                             env=env)
 
         ofd = p.stdout.fileno()
         efd = p.stderr.fileno()
@@ -133,7 +132,7 @@ class GSSHInterface(object):
         return hook.check_command(command)
 
     def get_env():
-        return None
+        return {}
 
     def get_repo_path():
         return None

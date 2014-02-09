@@ -4,3 +4,4 @@ local_config.py
 build
 *egg-info/
 .ropeproject
+dist
