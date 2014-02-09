@@ -18,7 +18,6 @@ class GSSHServer(paramiko.ServerInterface):
 
     def __init__(self):
         self.command = None
-        self.key = None
         self.event = threading.Event()
         self.interface = config.gssh_interface()
 
@@ -35,31 +34,31 @@ class GSSHServer(paramiko.ServerInterface):
         logger.info('Auth attempt with key: %s' % hex_fingerprint)
         if not self.interface.check_user(username):
             return paramiko.AUTH_SUCCESSFUL
-        if not self.interface.check_user_key(key):
-            return paramiko.AUTH_SUCCESSFUL
-        if hook.check_username(username) and hook.check_store_key(key):
-            self.key = key
+        if not self.interface.check_key(key):
             return paramiko.AUTH_SUCCESSFUL
         return paramiko.AUTH_FAILED
 
-    def check_channel_exec_request(self, channel, command):
-        logger.info('Command %s received' % command)
-        command, repo = hook.parser_command(command)
-        if not self.interface.check_repo(repo):
-            self.event.set()
-            return False
-        if not self.interface.check_command(command):
-            self.event.set()
-            return False
-        if not hook.check_command(command[0]) \
-                or not hook.check_permits(self.key,
-                                          repo):
-            self.event.set()
-            return False
-        if not hook.check_exisit(repo):
-            channel.sendall_stderr('Error: Repository not found.\n')
+    # not paramiko method
+    def check_error_message(self, channel):
+        message = self.interface.message
+        if message:
+            channel.sendall_stderr(message)
             self.event.set()
             return True
+        self.event.set()
+
+    def check_channel_exec_request(self, channel, command):
+        logger.info('Command %s received' % command)
+        command, repo = self.interface.parse_command(command)
+        if not self.interface.check_repo(repo):
+            if self.check_error_message(channel):
+                return True
+            return False
+        if not self.interface.check_command(command):
+            if self.check_error_message(channel):
+                return True
+            return False
+        command.append(self.interface.get_repo_path())
         self.command = command
         self.event.set()
         return True
@@ -116,23 +115,44 @@ class GSSHServer(paramiko.ServerInterface):
 class GSSHInterface(object):
 
     def __init__(self):
-        pass
+        self.message = ''
+        self.repo = ''
+        self.username = ''
+        self.key = ''
+        self.command = []
+        self.ssh_username = ''
+
+    def parse_command(self, command):
+        if not command:
+            return [], ''
+        # command eg: git-upload-pack 'code.git'
+        args = command.split(' ')
+        cmd = args[:-1]
+        repo = args[-1].strip("'")
+        return cmd, repo
 
     def check_user(self, name):
-        return hook.check_username(name)
+        self.ssh_username = name
+        if name == 'git':
+            return True
+        return False
 
-    def check_user_key(self, key):
+    def check_key(self, key):
+        self.key = key
         return hook.check_store_key(key)
 
     def check_repo(self, repo):
+        self.repo = repo
+        # 'Error: Repository not found.\n'
         key = self.key
         return hook.check_permits(key, repo)
 
     def check_command(self, command):
-        return hook.check_command(command)
+        self.command = command
+        return hook.check_command(command[0])
 
-    def get_env():
-        return {}
-
-    def get_repo_path():
+    def get_env(self):
         return None
+
+    def get_repo_path(self):
+        return self.repo
