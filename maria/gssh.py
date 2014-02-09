@@ -16,12 +16,12 @@ logger = logging.getLogger(__name__)
 
 class GSSHServer(paramiko.ServerInterface):
 
-    def __init__(self, interface=None):
+    def __init__(self):
         self.command = None
         self.key = None
         self.event = threading.Event()
         self.git_env = None
-        self.interface = interface or GSSHInterface()
+        self.interface = config.gssh_interface()
 
     def get_allowed_auths(self, username):
         return 'publickey'
@@ -126,10 +126,14 @@ class GSSHInterface(object):
         return hook.check_store_key(key)
 
     def check_repo(self, repo):
+        key = self.key
         return hook.check_permits(key, repo)
 
     def check_command(self, command):
         return hook.check_command(command)
 
     def get_env():
+        return None
+
+    def get_repo_path():
         return None

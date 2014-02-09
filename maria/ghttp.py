@@ -10,6 +10,7 @@ from os.path import join, exists, getmtime, getsize
 from urllib import unquote
 from libs.git import Git
 from libs.auth import decode, DecodeError
+from maria.config import config as _config
 
 
 # Weekday and month names for HTTP date/time formatting; always English!
@@ -93,12 +94,11 @@ class GHTTPServer(object):
          re.compile("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.idx$")],
     ]
 
-    def __init__(self, config=None, interface=None):
+    def __init__(self, config=None):
         self.headers = {}
         self.set_config(config)
         self.git = Git(config.git_path)
-        interface = interface if interface else GHTTPInterface
-        self.interface = interface()
+        self.interface = _config.ghttp_interface()
 
     def set_config(self, config):
         self.config = config or {}
@@ -434,4 +434,7 @@ class GHTTPInterface(object):
         return True
 
     def get_env(self):
+        return {}
+
+    def get_repo_path(self):
         return None

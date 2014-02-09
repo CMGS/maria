@@ -21,6 +21,9 @@ class Config(object):
         self.git_path = "git"
         self.repo_root_path = "./"
 
+        self.gssh_interface = "maria.gssh.GSSHInterface"
+        self.ghttp_interface = "maria.ghttp.GHTTPInterface"
+
     def parser(self, args):
         for key in dir(args):
             if key.startswith('_'):

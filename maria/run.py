@@ -22,27 +22,36 @@ from maria.libs.colorlog import ColorizingStreamHandler
 
 logger = logging.getLogger()
 
+
 def populate_argument_parser(parser):
-    parser.add_argument("-p", "--port", default=2200, dest="port", type=int, \
+    parser.add_argument("-p", "--port", default=2200, dest="port",
+                        type=int,
                         help="port number")
-    parser.add_argument("--host", default="0.0.0.0", dest="host", \
+    parser.add_argument("--host", default="0.0.0.0", dest="host",
                         help="host")
-    parser.add_argument("-w", "--worker", default="maria.gssh.GSSHServer", dest="worker", \
+    parser.add_argument("-w", "--worker", default="maria.gssh.GSSHServer",
+                        dest="worker",
                         help="worker define")
-    parser.add_argument("-c", "--hook", default="", dest="hook", \
+    parser.add_argument("-c", "--hook", default="", dest="hook",
                         help="The path to a maria hook file.")
-    parser.add_argument("--debug", default=False, dest="debug", action="store_true", \
+    parser.add_argument("--debug", default=False, dest="debug",
+                        action="store_true",
                         help="debug")
-    parser.add_argument("--host-key", default="host.key", dest="host_key", \
+    parser.add_argument("--host-key", default="host.key", dest="host_key",
                         help="host key file path")
-    parser.add_argument("--log-file", default="/tmp/maria.log", dest="log_file", \
+    parser.add_argument("--log-file", default="/tmp/maria.log",
+                        dest="log_file",
                         help="log file path")
-    parser.add_argument("--auth-timeout", default=20, dest="auth_timeout", type=int, \
+    parser.add_argument("--auth-timeout", default=20, dest="auth_timeout",
+                        type=int,
                         help="auth timeout")
-    parser.add_argument("--check-timeout", default=10, dest="check_timeout", type=int, \
+    parser.add_argument("--check-timeout", default=10, dest="check_timeout",
+                        type=int,
                         help="check timeout")
-    parser.add_argument("--select-timeout", default=10, dest="select_timeout", type=int, \
+    parser.add_argument("--select-timeout", default=10, dest="select_timeout",
+                        type=int,
                         help="select timeout")
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -66,12 +75,15 @@ def main():
                            project_root=config.repo_root_path)
         server = WSGIServer((args.host, args.port), GHTTPServer(http_config))
     config.worker = load_class(config.worker)
+    config.gssh_interface = load_class(config.gssh_interface)
+    config.ghttp_interface = load_class(config.ghttp_interface)
 
     try:
         logger.info('Maria System Start at %s:%d' % (config.host, config.port))
         server.serve_forever()
     except KeyboardInterrupt:
         logger.info('Maria System Stopped')
+
 
 def init_log():
     logging.StreamHandler = ColorizingStreamHandler
@@ -82,6 +94,6 @@ def init_log():
     logging.basicConfig(level=level)
     paramiko.util.log_to_file(config.log_file, level=level)
 
+
 if __name__ == '__main__':
     main()
-
