@@ -32,8 +32,6 @@ def populate_argument_parser(parser):
     parser.add_argument("-w", "--worker", default="maria.gssh.GSSHServer",
                         dest="worker",
                         help="worker define")
-    parser.add_argument("-c", "--hook", default="", dest="hook",
-                        help="The path to a maria hook file.")
     parser.add_argument("--debug", default=False, dest="debug",
                         action="store_true",
                         help="debug")
@@ -60,8 +58,6 @@ def main():
 
     config.parser(args)
     init_log()
-    # init hook file
-    from maria import hook
 
     if config.worker == "maria.gssh.GSSHServer":
         config.host_key = paramiko.RSAKey(filename=config.host_key)
