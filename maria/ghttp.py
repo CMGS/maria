@@ -14,7 +14,7 @@ from libs.auth import decode, DecodeError
 
 # Weekday and month names for HTTP date/time formatting; always English!
 _weekdayname = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-_monthname = [None, # Dummy so we can use 1-based month numbers
+_monthname = [None,  # Dummy so we can use 1-based month numbers
               "Jan", "Feb", "Mar", "Apr", "May", "Jun",
               "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
@@ -55,18 +55,42 @@ class GHTTPServer(object):
     VALID_SERVICE_TYPES = ['upload-pack', 'receive-pack']
 
     SERVICES = [
-      ["POST", 'service_rpc',      re.compile("(.*?)/git-upload-pack$"),  'upload-pack'],
-      ["POST", 'service_rpc',      re.compile("(.*?)/git-receive-pack$"), 'receive-pack'],
+        ["POST",
+         'service_rpc',
+         re.compile("(.*?)/git-upload-pack$"),
+         'upload-pack'],
+        ["POST",
+         'service_rpc',
+         re.compile("(.*?)/git-receive-pack$"),
+         'receive-pack'],
 
-      ["GET",  'get_info_refs',    re.compile("(.*?)/info/refs$")],
-      ["GET",  'get_text_file',    re.compile("(.*?)/HEAD$")],
-      ["GET",  'get_text_file',    re.compile("(.*?)/objects/info/alternates$")],
-      ["GET",  'get_text_file',    re.compile("(.*?)/objects/info/http-alternates$")],
-      ["GET",  'get_info_packs',   re.compile("(.*?)/objects/info/packs$")],
-      ["GET",  'get_text_file',    re.compile("(.*?)/objects/info/[^/]*$")],
-      ["GET",  'get_loose_object', re.compile("(.*?)/objects/[0-9a-f]{2}/[0-9a-f]{38}$")],
-      ["GET",  'get_pack_file',    re.compile("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.pack$")],
-      ["GET",  'get_idx_file',     re.compile("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.idx$")],
+        ["GET",
+         'get_info_refs',
+         re.compile("(.*?)/info/refs$")],
+        ["GET",
+         'get_text_file',
+         re.compile("(.*?)/HEAD$")],
+        ["GET",
+         'get_text_file',
+         re.compile("(.*?)/objects/info/alternates$")],
+        ["GET",
+         'get_text_file',
+         re.compile("(.*?)/objects/info/http-alternates$")],
+        ["GET",
+         'get_info_packs',
+         re.compile("(.*?)/objects/info/packs$")],
+        ["GET",
+         'get_text_file',
+         re.compile("(.*?)/objects/info/[^/]*$")],
+        ["GET",
+         'get_loose_object',
+         re.compile("(.*?)/objects/[0-9a-f]{2}/[0-9a-f]{38}$")],
+        ["GET",
+         'get_pack_file',
+         re.compile("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.pack$")],
+        ["GET",
+         'get_idx_file',
+         re.compile("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.idx$")],
     ]
 
     def __init__(self, config=None, interface=None):
@@ -98,7 +122,7 @@ class GHTTPServer(object):
             return None
         if not self.interface.check_user(username):
             return None
-        if not self.interface.check_user_pass(password):
+        if not self.interface.check_password(password):
             return None
         return True
 
@@ -117,7 +141,8 @@ class GHTTPServer(object):
     def call(self):
         if not self.check_auth():
             return self.render_no_authorization()
-        match = self.match_routing(self.env["PATH_INFO"].lstrip('/'), self.env["REQUEST_METHOD"])
+        match = self.match_routing(self.env["PATH_INFO"].lstrip('/'),
+                                   self.env["REQUEST_METHOD"])
         if not match:
             return self.render_not_found()
         cmd, path, reqfile, rpc = match
@@ -143,20 +168,27 @@ class GHTTPServer(object):
         git_cmd = "upload_pack" if self.rpc == "upload-pack" else "receive_pack"
         self.status = "200"
         self.headers["Content-Type"] = "application/x-git-%s-result" % self.rpc
-        return getattr(self.git, git_cmd)(self.dir, {"msg": input}, callback, env=self.git_env)
+        return getattr(self.git, git_cmd)(self.dir,
+                                          {"msg": input},
+                                          callback,
+                                          env=self.git_env)
 
     def get_info_refs(self):
         service_name = self.get_service_type()
         if self.has_access(service_name):
             git_cmd = "upload_pack" if service_name == "upload-pack" else "receive_pack"
-            refs = getattr(self.git, git_cmd)(self.dir, {"advertise_refs": True}, env=self.git_env)
+            refs = getattr(self.git, git_cmd)(self.dir,
+                                              {"advertise_refs": True},
+                                              env=self.git_env)
             self.status = "200"
             self.headers["Content-Type"] = "application/x-git-%s-advertisement" % service_name
             self.hdr_nocache()
+
             def read_file():
                 yield self.pkt_write("# service=git-%s\n" % service_name)
                 yield self.pkt_flush
                 yield refs
+
             return read_file()
         else:
             return self.dumb_info_refs()
@@ -166,20 +198,28 @@ class GHTTPServer(object):
 
     def dumb_info_refs(self):
         self.update_server_info()
-        return self.send_file(self.reqfile, "text/plain; charset=utf-8")
+        return self.send_file(self.reqfile,
+                              "text/plain; charset=utf-8")
 
     def get_info_packs(self):
         # objects/info/packs
-        return self.send_file(self.reqfile, "text/plain; charset=utf-8")
+        return self.send_file(self.reqfile,
+                              "text/plain; charset=utf-8")
 
     def get_loose_object(self):
-        return self.send_file(self.reqfile, "application/x-git-loose-object", cached=True)
+        return self.send_file(self.reqfile,
+                              "application/x-git-loose-object",
+                              cached=True)
 
     def get_pack_file(self):
-        return self.send_file(self.reqfile, "application/x-git-packed-objects", cached=True)
+        return self.send_file(self.reqfile,
+                              "application/x-git-packed-objects",
+                              cached=True)
 
     def get_idx_file(self):
-        return self.send_file(self.reqfile, "application/x-git-packed-objects-toc", cached=True)
+        return self.send_file(self.reqfile,
+                              "application/x-git-packed-objects-toc",
+                              cached=True)
 
     def get_service_type(self):
         def get_param():
@@ -212,7 +252,6 @@ class GHTTPServer(object):
                 return [cmd, path, file, rpc]
         return None
 
-
     def send_file(self, reqfile, content_type, cached=False):
         reqfile = join(self.dir, reqfile)
         if not self.is_subpath(reqfile, self.dir):
@@ -232,6 +271,7 @@ class GHTTPServer(object):
         size = getsize(reqfile)
         if size:
             self.headers["Content-Length"] = size
+
             def read_file():
                 with open(reqfile, "rb") as f:
                     while True:
@@ -239,13 +279,13 @@ class GHTTPServer(object):
                         if not part:
                             break
                         yield part
+
             return read_file()
         else:
             with open(reqfile, "rb") as f:
                 part = f.read()
                 self.headers["Content-Length"] = str(len(part))
             return [part]
-
 
     def update_server_info(self):
         self.git.update_server_info(self.dir)
@@ -334,19 +374,20 @@ class GHTTPServer(object):
         return self.get_config_setting(rpc)
 
     def get_config_setting(self, service_name):
-      service_name = service_name.replace('-', '')
-      setting = self.git.get_config_setting(self.dir, "http.%s" % service_name)
-      if service_name == 'uploadpack':
-        return setting != 'false'
-      else:
-        return setting == 'true'
+        service_name = service_name.replace('-', '')
+        setting = self.git.get_config_setting(self.dir,
+                                              "http.%s" % service_name)
+        if service_name == 'uploadpack':
+            return setting != 'false'
+        else:
+            return setting == 'true'
 
     def get_git_dir(self, path):
         root = self.get_project_root()
         path = join(root, path)
         if not self.is_subpath(path, root):
             return False
-        if exists(path): # TODO: check is a valid git directory
+        if exists(path):  # TODO: check is a valid git directory
             return path
         return False
 
@@ -358,9 +399,9 @@ class GHTTPServer(object):
         path = unquote(path)
         checkpath = unquote(checkpath)
         # Remove trailing slashes from filepath
-        checkpath = checkpath.replace("\/+$",'')
+        checkpath = checkpath.replace("\/+$", '')
         if re.match("^%s(\/|$)" % checkpath, path):
-           return True
+            return True
 
 
 class GHTTPInterface(object):
@@ -375,7 +416,7 @@ class GHTTPInterface(object):
     def check_user(self, user):
         return True
 
-    def check_user_pass(self, password):
+    def check_password(self, password):
         return True
 
     def check_repo(self, repo):
@@ -394,4 +435,3 @@ class GHTTPInterface(object):
 
     def get_env(self):
         return None
-

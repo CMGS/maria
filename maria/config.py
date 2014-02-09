@@ -1,7 +1,9 @@
 #!/usr/local/bin/python2.7
 #coding:utf-8
 
+
 class Config(object):
+
     def __init__(self):
         self.debug = False
         self.log_file = '/tmp/maria.log'
@@ -25,9 +27,8 @@ class Config(object):
                 continue
             new_conf = getattr(args, key)
             orig_conf = getattr(self, key, None)
-            if orig_conf ==  new_conf:
+            if orig_conf == new_conf:
                 continue
             setattr(self, key, new_conf)
 
 config = Config()
-
