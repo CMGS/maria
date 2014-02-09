@@ -5,6 +5,7 @@ import inspect
 import traceback
 import pkg_resources
 
+
 def load_class(uri, default="GSSHServer", section="maria.gssh"):
     if inspect.isclass(uri):
         return uri
@@ -21,8 +22,9 @@ def load_class(uri, default="GSSHServer", section="maria.gssh"):
             return pkg_resources.load_entry_point(dist, section, name)
         except:
             exc = traceback.format_exc()
-            raise RuntimeError("class uri %r invalid or not found: \n\n[%s]" % (uri,
-                exc))
+            raise RuntimeError("class uri %r invalid "
+                               "or not found: \n\n[%s]" % (uri,
+                                                           exc))
     else:
         components = uri.split('.')
         if len(components) == 1:
@@ -31,21 +33,22 @@ def load_class(uri, default="GSSHServer", section="maria.gssh"):
                     uri = uri[1:]
 
                 return pkg_resources.load_entry_point("maria",
-                            section, uri)
+                                                      section, uri)
             except:
                 exc = traceback.format_exc()
-                raise RuntimeError("class uri %r invalid or not found: \n\n[%s]" % (uri,
-                    exc))
+                raise RuntimeError("class uri %r invalid "
+                                   "or not found: \n\n[%s]" % (uri,
+                                                               exc))
 
         klass = components.pop(-1)
         try:
             mod = __import__('.'.join(components))
         except:
             exc = traceback.format_exc()
-            raise RuntimeError("class uri %r invalid or not found: \n\n[%s]" % (uri,
-                exc))
+            raise RuntimeError("class uri %r invalid "
+                               "or not found: \n\n[%s]" % (uri,
+                                                           exc))
 
         for comp in components[1:]:
             mod = getattr(mod, comp)
         return getattr(mod, klass)
-
