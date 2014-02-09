@@ -1,4 +1,4 @@
-#!/usr/local/bin/python2.7
+#!/usr/bin/python
 #coding:utf-8
 
 
@@ -13,7 +13,6 @@ class Config(object):
         self.select_timeout = 10
         self.host = "0.0.0.0"
         self.port = 2200
-        self.hook = ""
         # TODO:
         # maria.gssh.GSSHServer
         # maria.ghttp.GHTTPServer
@@ -23,6 +22,8 @@ class Config(object):
 
         self.gssh_interface = "maria.gssh.GSSHInterface"
         self.ghttp_interface = "maria.ghttp.GHTTPInterface"
+        self.ssh_port = 2200
+        self.http_port = 8000
 
     def parser(self, args):
         for key in dir(args):
