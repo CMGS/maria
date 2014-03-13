@@ -1,13 +1,12 @@
-#!/usr/local/bin/python2.7
+#!/usr/bin/python
 #coding:utf-8
 
 import logging
-
 import paramiko
-
 from maria.config import config
 
 logger = logging.getLogger(__name__)
+
 
 def handle(socket, address):
     client = None
@@ -42,12 +41,14 @@ def handle(socket, address):
             client.close()
         return
 
+
 def auth(client, address):
     channel = client.accept(config.auth_timeout)
     if channel is None:
         logger.info('Auth timeout %s:%d' % address)
         return None
     return channel
+
 
 def check_command(server, address):
     if not server.event.wait(config.check_timeout):

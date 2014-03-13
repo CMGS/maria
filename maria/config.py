@@ -1,7 +1,9 @@
-#!/usr/local/bin/python2.7
+#!/usr/bin/python
 #coding:utf-8
 
+
 class Config(object):
+
     def __init__(self):
         self.debug = False
         self.log_file = '/tmp/maria.log'
@@ -11,8 +13,15 @@ class Config(object):
         self.select_timeout = 10
         self.host = "0.0.0.0"
         self.port = 2200
-        self.hook = ""
-        self.worker = "maria.gerver.Gerver"
+        # TODO:
+        # maria.gssh.GSSHServer
+        # maria.ghttp.GHTTPServer
+        self.worker = "maria.gssh.GSSHServer"
+        self.git_path = "git"
+        self.repos_path = ""
+
+        self.gssh_interface = "maria.gssh.GSSHInterface"
+        self.ghttp_interface = "maria.ghttp.GHTTPInterface"
 
     def parser(self, args):
         for key in dir(args):
@@ -20,9 +29,8 @@ class Config(object):
                 continue
             new_conf = getattr(args, key)
             orig_conf = getattr(self, key, None)
-            if orig_conf ==  new_conf:
+            if orig_conf == new_conf:
                 continue
             setattr(self, key, new_conf)
 
 config = Config()
-
