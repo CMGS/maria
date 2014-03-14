@@ -171,3 +171,4 @@ class GSSHInterface(object):
 
     def get_repo_path(self):
         return self.repo
+
