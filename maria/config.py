@@ -12,8 +12,8 @@ class Config(object):
         self.select_timeout = 10
         self.host = '0.0.0.0'
         self.port = 2200
-        self.worker = None
-        self.interface = None
+        self.worker = ''
+        self.interface = ''
         self.repos_path = ''
         self.git_dir = ''
 
@@ -23,7 +23,7 @@ class Config(object):
                 continue
             new_conf = getattr(args, key)
             orig_conf = getattr(self, key, None)
-            if not orig_conf or orig_conf == new_conf:
+            if orig_conf is None or orig_conf == new_conf:
                 continue
             setattr(self, key, new_conf)
 

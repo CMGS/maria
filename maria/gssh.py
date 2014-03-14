@@ -32,11 +32,10 @@ class GSSHServer(paramiko.ServerInterface):
     def check_auth_publickey(self, username, key):
         hex_fingerprint = utils.hex_key(key)
         logger.info('Auth attempt with key: %s' % hex_fingerprint)
-        if not self.interface.check_user(username):
-            return paramiko.AUTH_SUCCESSFUL
-        if not self.interface.check_key(key):
-            return paramiko.AUTH_SUCCESSFUL
-        return paramiko.AUTH_FAILED
+        if not self.interface.check_user(username) \
+            or not self.interface.check_key(key):
+            return paramiko.AUTH_FAILED
+        return paramiko.AUTH_SUCCESSFUL
 
     # not paramiko method
     def check_error_message(self, channel):

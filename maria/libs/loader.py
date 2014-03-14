@@ -85,6 +85,4 @@ def load_class(uri, default="GSSHServer", section="maria.gssh"):
                                "or not found: \n\n[%s]" % (uri,
                                                            exc))
 
-        for comp in components[1:]:
-            mod = getattr(mod, comp)
         return getattr(mod, klass)
