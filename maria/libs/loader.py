@@ -1,7 +1,9 @@
 #!/usr/bin/python
 #coding:utf-8
 
+import os
 import sys
+import imp
 import inspect
 import traceback
 import pkg_resources
@@ -61,6 +63,12 @@ def load_class(uri, default="GSSHServer", section="maria.gssh"):
             raise RuntimeError("class uri %r invalid "
                                "or not found: \n\n[%s]" % (uri,
                                                            exc))
+    elif uri.startswith("file:"):
+        path, klass = uri.split('file:')[1].rsplit('#')
+        path = os.path.realpath(path)
+        module = path.rsplit('/',1)[-1].strip('.py')
+        mod = imp.load_source('%s.%s' % (module, klass), path)
+        return getattr(mod, klass)
     else:
         components = uri.split('.')
         if len(components) == 1:
