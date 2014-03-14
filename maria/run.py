@@ -9,6 +9,7 @@ try:
 except ImportError:
     print 'You need install gevent manually! System shutdown.'
 
+import os
 import sys
 import logging
 import argparse
@@ -71,7 +72,7 @@ def main():
 
     if args.mode == 'ssh':
         config.worker = load_class('maria.gssh.GSSHServer')
-        config.host_key = paramiko.RSAKey(filename=config.host_key)
+        config.host_key = paramiko.RSAKey(filename=os.path.realpath(config.host_key))
         logger.info('Host Key %s' % hex_key(config.host_key))
         interface = args.interface or 'maria.gssh.GSSHInterface'
         server = StreamServer((args.host, args.port), handle)
