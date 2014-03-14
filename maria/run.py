@@ -9,6 +9,7 @@ try:
 except ImportError:
     print 'You need install gevent manually! System shutdown.'
 
+import sys
 import logging
 import argparse
 import paramiko
@@ -29,9 +30,12 @@ def populate_argument_parser(parser):
                         help="port number")
     parser.add_argument("--host", default="0.0.0.0", dest="host",
                         help="host")
-    parser.add_argument("-w", "--worker", default="maria.gssh.GSSHServer",
-                        dest="worker",
-                        help="worker define")
+    parser.add_argument("-m", "--mode", default="ssh",
+                        dest="mode",
+                        help="maria mode (ssh or http)")
+    parser.add_argument("-i", "--interface", default=None,
+                        dest="interface",
+                        help="interface define")
     parser.add_argument("--debug", default=False, dest="debug",
                         action="store_true",
                         help="debug")
@@ -40,6 +44,12 @@ def populate_argument_parser(parser):
     parser.add_argument("--log-file", default="/tmp/maria.log",
                         dest="log_file",
                         help="log file path")
+    parser.add_argument("--git-dir", default='',
+                        dest="git_dir",
+                        help="where is git")
+    parser.add_argument("--repos_path", default="/tmp",
+                        dest="repos_path",
+                        help="repos path")
     parser.add_argument("--auth-timeout", default=20, dest="auth_timeout",
                         type=int,
                         help="auth timeout")
@@ -59,15 +69,21 @@ def main():
     config.parser(args)
     init_log()
 
-    if config.worker == "maria.gssh.GSSHServer":
+    if args.mode == 'ssh':
+        config.worker = load_class('maria.gssh.GSSHServer')
         config.host_key = paramiko.RSAKey(filename=config.host_key)
         logger.info('Host Key %s' % hex_key(config.host_key))
+        interface = args.interface or 'maria.gssh.GSSHInterface'
         server = StreamServer((args.host, args.port), handle)
-    else:
+    elif args.mode == 'http':
+        config.worker = load_class('maria.ghttp.GHTTPServer')
+        interface = args.interface or 'maria.ghttp.GHTTPInterface'
         server = WSGIServer((args.host, args.port), GHTTPServer())
-    config.worker = load_class(config.worker)
-    config.gssh_interface = load_class(config.gssh_interface)
-    config.ghttp_interface = load_class(config.ghttp_interface)
+    else:
+        print 'Not support %s yet, system shutdown!' % args.mode
+        sys.exit(-1)
+
+    config.interface = load_class(interface)
 
     try:
         logger.info('Maria System Start at %s:%d' % (config.host, config.port))

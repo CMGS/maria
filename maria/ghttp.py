@@ -8,10 +8,11 @@ import select
 from os import access
 from os.path import join, exists, getmtime, getsize
 from urllib import unquote
-from maria.libs.date import format_date_time
 from maria.libs.git import Git
-from maria.libs.auth import decode, DecodeError
 from maria.config import config
+from maria.base import BaseInterface
+from maria.libs.date import format_date_time
+from maria.libs.auth import decode, DecodeError
 
 
 def callback(p):
@@ -84,12 +85,12 @@ class GHTTPServer(object):
     def __init__(self):
         self.headers = {}
         self.interface = None
-        self.git = Git(config.git_path)
+        self.git = Git(config.git_dir)
 
     def __call__(self, environ, start_response):
         self.headers = {}
         self.env = environ
-        self.interface = config.ghttp_interface()
+        self.interface = config.interface()
         body = self.call()
         start_response(self.status, self.headers.items())
         return body
@@ -363,17 +364,11 @@ class GHTTPServer(object):
             return setting == 'true'
 
     def get_git_dir(self, path):
-        root = self.get_project_root()
-        path = join(root, path)
-        if not self.is_subpath(path, root):
+        if not self.is_subpath(self.interface.get_repo_path, config.repos_path):
             return False
-        if exists(path):  # TODO: check is a valid git directory
+        if exists(config.repos_path):  # TODO: check is a valid git directory
             return path
         return False
-
-    def get_project_root(self):
-        root = config.repos_path or os.getcwd()
-        return root
 
     def is_subpath(self, path, checkpath):
         path = unquote(path)
@@ -384,7 +379,7 @@ class GHTTPServer(object):
             return True
 
 
-class GHTTPInterface(object):
+class GHTTPInterface(BaseInterface):
 
     def __init__(self):
         self.message = ''
@@ -417,8 +412,3 @@ class GHTTPInterface(object):
         self.command = cmd
         return True
 
-    def get_env(self):
-        return None
-
-    def get_repo_path(self):
-        return None

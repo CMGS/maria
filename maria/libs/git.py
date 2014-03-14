@@ -16,8 +16,8 @@ def chdir(dir):
 
 class Git(object):
 
-    def __init__(self, path=None):
-        self.git_path = path if path else 'git'
+    def __init__(self, dir=''):
+        self.git_path = os.path.join(dir, 'git')
 
     @property
     def command_options(self):

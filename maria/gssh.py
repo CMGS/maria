@@ -9,6 +9,7 @@ import subprocess
 import paramiko
 from maria import utils
 from maria.config import config
+from maria.base import BaseInterface
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ class GSSHServer(paramiko.ServerInterface):
     def __init__(self):
         self.command = None
         self.event = threading.Event()
-        self.interface = config.gssh_interface()
+        self.interface = config.interface()
 
     def get_allowed_auths(self, username):
         return 'publickey'
@@ -110,16 +111,7 @@ class GSSHServer(paramiko.ServerInterface):
         channel.close()
         logger.info('Command execute finished')
 
-
-DATA = 'AAAAB3NzaC1yc2EAAAADAQABAAABAQDJOtsej4dNSKTdMBnD8v6L0lZ1Tk+WTMlx' \
-    'sFf2+pvkdoAu3EB3RZ/frpyV6//bJNTDysyvwgOvANT/K8u5fzrOI2qDZqVU7dtDSwU' \
-    'edM3YSWcSjjuUiec7uNZeimqhEwzYGDcUSSXe7GNH9YsVZuoWEf1du6OLtuXi7iJY4H' \
-    'abU0N49zorXtxmlXcPeGPuJwCiEu8DG/uKQeruI2eQS9zMhy73Jx2O3ii3PMikZt3g/' \
-    'RvxzqIlst7a4fEotcYENtsJF1ZrEm7B3qOBZ+k5N8D3CkDiHPmHwXyMRYIQJnyZp2y0' \
-    '3+1nXT16h75cer/7MZMm+AfWSATdp09/meBt6swD'
-
-
-class GSSHInterface(object):
+class GSSHInterface(BaseInterface):
 
     def __init__(self):
         self.message = ''
@@ -146,10 +138,9 @@ class GSSHInterface(object):
 
     def check_key(self, key):
         self.key = key
-        key_b = key.get_base64()
-        if DATA == key_b:
-            return True
-        return False
+        # key_b = key.get_base64()
+        # check key_b
+        return True
 
     def check_repo(self, repo):
         self.repo = repo
@@ -164,11 +155,7 @@ class GSSHInterface(object):
         if not command[0] or not command[0] in ('git-receive-pack',
                                                 'git-upload-pack'):
             return False
+        if config.git_dir:
+            command[0] = os.path.join(config.git_dir, command[0])
         return True
-
-    def get_env(self):
-        return None
-
-    def get_repo_path(self):
-        return self.repo
 
