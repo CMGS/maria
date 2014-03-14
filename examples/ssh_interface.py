@@ -16,7 +16,5 @@ class NGSSHInterface(GSSHInterface):
     def check_key(self, key):
         self.key = key
         key_b = key.get_base64()
-        if DATA == key_b:
-            return True
-        return False
+        return DATA == key_b
 
