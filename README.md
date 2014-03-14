@@ -1,7 +1,7 @@
 Maria System
 =============
 
-A way to serve git repos through ssh protocol like Github.
+A way to serve git repos through ssh and http protocol like Github.
 
 ## Requirements
 
@@ -9,9 +9,9 @@ You can install requirements from requirements.txt with ``pip install -r require
 
 ## Features
 
-1. support git clone/push/pull with ssh protocol.
+1. support git clone/push/pull with ssh and http protocol.
 2. auth by pub key, you can write your own verify code to use mysql and others easily.
-3. people always like coroutine.
+3. people always like coroutine, powered by gevent.
 4. safely, only allow commands in white list.
 
 ## Run it
@@ -25,7 +25,7 @@ python setup.py develop
 Then, you can find example in examples dir. In simple case, ``run-maria`` will start Maria System.  
 You also can specify options by yourself like ``run-maria --debug`` or ``run-maria -p 22 --host 0.0.0.0``.  
 Get options define use this command ``run-maria -h``.  
-And ``run-maria --hook hook_example.py --host-key host.key`` will start maria system with all examples.
+And ``run-maria --host-key=./examples/host.key -i file:./examples/ssh_interface.py#NGSSHInterface`` will start maria system with all examples.
 
 Anyway, I think single process will be ok in production environment with supervisord or something like that.  
 
