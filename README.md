@@ -35,6 +35,6 @@ I disable gevent subprocess monkey patch because I found the execute command fun
 
 ## Thanks
 
-[gevent https://github.com/surfly/gevent/](https://github.com/surfly/gevent/)  
-[paramiko https://github.com/paramiko/paramiko/](https://github.com/paramiko/paramiko/)  
+[gevent https://github.com/surfly/gevent/](https://github.com/surfly/gevent/)
 
+[paramiko https://github.com/paramiko/paramiko/](https://github.com/paramiko/paramiko/)
