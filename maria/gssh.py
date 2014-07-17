@@ -1,5 +1,4 @@
-#!/usr/bin/python
-#coding:utf-8
+# -*- coding: utf-8 -*-
 
 import os
 import select
@@ -7,19 +6,157 @@ import logging
 import threading
 import subprocess
 import paramiko
-from maria import utils
-from maria.config import config
-from maria.base import BaseInterface
-
-logger = logging.getLogger(__name__)
+from . import utils
+from .colorlog import ColorizingStreamHandler
 
 
-class GSSHServer(paramiko.ServerInterface):
+class GSSHServer(object):
 
-    def __init__(self):
-        self.command = None
+    def __init__(self, config=None):
+        self.config = config
+        self.logger = logging.getLogger(__name__)
+        self.init_log()
+        self.init_key()
+
+    # SocketServer:
+    #  self.RequestHandlerClass(request, client_address, self)
+    def __call__(self, socket, address, _=None):
+        client = None
+        try:
+            client = paramiko.Transport(socket)
+            try:
+                client.load_server_moduli()
+            except Exception:
+                self.logger.exception('Failed to load moduli -- gex will be unsupported.')
+                raise
+
+            client.add_server_key(self.config.host_key)
+            server = GSSHServerInterface(app=self)
+            try:
+                client.start_server(server=server)
+            except paramiko.SSHException:
+                self.logger.exception('SSH negotiation failed.')
+                return
+
+            channel = self.check_ssh_auth(client, address)
+            if not channel:
+                return
+
+            if not self.check_ssh_command(server, address):
+                return
+
+            server.main_loop(channel)
+        except Exception:
+            self.logger.exception('Caught Exception')
+        finally:
+            if client:
+                client.close()
+            return
+
+    def init_log(self):
+        logging.StreamHandler = ColorizingStreamHandler
+        level = logging.DEBUG
+        if not self.config.debug:
+            level = logging.INFO
+        logging.BASIC_FORMAT = "%(asctime)s [%(name)s] %(message)s"
+        logging.basicConfig(level=level)
+        if self.config.log_file:
+            paramiko.util.log_to_file(self.onfig.log_file, level=level)
+
+    def init_key(self):
+        path = os.path.realpath(self.config.host_key_path)
+        self.config.host_key = paramiko.RSAKey(filename=path)
+        self.logger.info('Host Key %s' % utils.hex_key(self.config.host_key))
+
+    def check_ssh_auth(self, client, address):
+        channel = client.accept(self.config.auth_timeout)
+        if channel is None:
+            self.logger.info('Auth timeout %s:%d' % address)
+            return None
+        return channel
+
+    def check_ssh_command(self, server, address):
+        if not server.event.wait(self.config.check_timeout):
+            self.logger.info('Check timeout %s:%d' % address)
+            return False
+        return True
+
+    def parse_ssh_command(self, command):
+        if not command:
+            return [], ''
+        # command eg: git-upload-pack 'code.git'
+        args = command.split(' ')
+        cmd = args[:-1]
+        repo = args[-1].strip("'")
+        return cmd, repo
+
+    def check_ssh_user(self, name):
+        if name == 'git':
+            return True
+        return False
+
+    def check_ssh_key(self, key):
+        # key_b = key.get_base64()
+        # check key_b
+        if not key:
+            return False
+        return True
+
+    def check_git_repo(self, repo):
+        # 'Error: Repository not found.\n'
+        if not repo:
+            return False
+        return True
+
+    def check_git_command(self, command):
+        if not command[0]:
+            return False
+        if not command[0] in ('git-receive-pack',
+                              'git-upload-pack'):
+            return False
+        if self.config.git_path:
+            command[0] = os.path.join(self.config.git_path, command[0])
+        return True
+
+    def get_permission(self, cmd, rpc):
+        if cmd == 'git-receive-pack':
+            return 'write'
+        if cmd == 'git-upload-pack':
+            return 'read'
+
+    # args: path
+    def get_repo_path(self, f):
+        self._get_repo_path_handler = f
+        return f
+
+    # args: ssh_username, key
+    def get_user(self, f):
+        self._get_user_handler = f
+        return f
+
+    # args: user, path, perm
+    def has_permission(self, f):
+        self._has_permission_handler = f
+        return f
+
+    # args: user, path
+    def get_environ(self, f):
+        self._get_environ_handler = f
+        return f
+
+
+class GSSHServerInterface(paramiko.ServerInterface):
+
+    def __init__(self, app=None):
+        self.app = app
         self.event = threading.Event()
-        self.interface = config.interface()
+        self.ssh_key = None
+        self.ssh_username = ''
+        self.repo_name = ''
+        self.username = ''
+        self.command = None
+        self.message = ''  # TODO: useless
+        self.environ = None
 
     def get_allowed_auths(self, username):
         return 'publickey'
@@ -31,15 +168,18 @@ class GSSHServer(paramiko.ServerInterface):
 
     def check_auth_publickey(self, username, key):
         hex_fingerprint = utils.hex_key(key)
-        logger.info('Auth attempt with key: %s' % hex_fingerprint)
-        if not self.interface.check_user(username) \
-            or not self.interface.check_key(key):
+        self.app.logger.info('Auth attempt with key: %s' % hex_fingerprint)
+        self.ssh_username = username
+        if not self.app.check_ssh_user(username):
+            return paramiko.AUTH_FAILED
+        self.ssh_key = key
+        if not self.app.check_ssh_key(key):
             return paramiko.AUTH_FAILED
         return paramiko.AUTH_SUCCESSFUL
 
     # not paramiko method
     def check_error_message(self, channel):
-        message = self.interface.message
+        message = self.message
         if message:
             channel.sendall_stderr(message)
             self.event.set()
@@ -47,17 +187,37 @@ class GSSHServer(paramiko.ServerInterface):
         self.event.set()
 
     def check_channel_exec_request(self, channel, command):
-        logger.info('Command %s received' % command)
-        command, repo = self.interface.parse_command(command)
-        if not self.interface.check_repo(repo):
+        self.app.logger.info('Command %s received' % command)
+        command, repo = self.app.parse_ssh_command(command)
+        self.repo_name = repo
+
+        try:
+            if not self.app.check_git_repo(repo):
+                return False
+            if not self.app.check_git_command(command):
+                return False
+
+            if hasattr(self.app, '_get_user_handler'):
+                self.username = self.app._get_user_handler(self.ssh_username, self.ssh_key)
+
+            if hasattr(self.app, '_has_permission_handler'):
+                perm = self.app.get_permission(command[0])
+                if not self.app._has_permission_handler(self.username, repo, perm):
+                    return False
+
+        except Exception as e:
+            self.message = e
             if self.check_error_message(channel):
                 return True
             return False
-        if not self.interface.check_command(command):
-            if self.check_error_message(channel):
-                return True
-            return False
-        command.append(self.interface.get_repo_path())
+
+        if hasattr(self.app, '_get_environ_handler'):
+            self.environ = self.app._get_environ_handler(self.username, repo)
+
+        if hasattr(self.app, '_get_repo_path_handler'):
+            repo = self.app._get_repo_path_handler(repo)
+
+        command.append(repo)
         self.command = command
         self.event.set()
         return True
@@ -66,13 +226,12 @@ class GSSHServer(paramiko.ServerInterface):
         if not self.command:
             return
 
-        env = self.interface.get_env()
         p = subprocess.Popen(self.command,
                              stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE,
                              close_fds=True,
-                             env=env)
+                             env=self.environ)
 
         ofd = p.stdout.fileno()
         efd = p.stderr.fileno()
@@ -81,7 +240,7 @@ class GSSHServer(paramiko.ServerInterface):
             r_ready, w_ready, x_ready = select.select([channel, ofd, efd],
                                                       [],
                                                       [],
-                                                      config.select_timeout)
+                                                      self.app.config.select_timeout)
 
             if channel in r_ready:
                 data = channel.recv(16384)
@@ -108,53 +267,4 @@ class GSSHServer(paramiko.ServerInterface):
         channel.send_exit_status(p.returncode)
         channel.shutdown(2)
         channel.close()
-        logger.info('Command execute finished')
-
-class GSSHInterface(BaseInterface):
-
-    def __init__(self):
-        self.message = ''
-        self.repo = ''
-        self.username = ''
-        self.key = ''
-        self.command = []
-        self.ssh_username = ''
-
-    def parse_command(self, command):
-        if not command:
-            return [], ''
-        # command eg: git-upload-pack 'code.git'
-        args = command.split(' ')
-        cmd = args[:-1]
-        repo = args[-1].strip("'")
-        return cmd, repo
-
-    def check_user(self, name):
-        self.ssh_username = name
-        if name == 'git':
-            return True
-        return False
-
-    def check_key(self, key):
-        self.key = key
-        # key_b = key.get_base64()
-        # check key_b
-        return True
-
-    def check_repo(self, repo):
-        self.repo = repo
-        # 'Error: Repository not found.\n'
-        key = self.key
-        if not key or not repo:
-            return False
-        return True
-
-    def check_command(self, command):
-        self.command = command
-        if not command[0] or not command[0] in ('git-receive-pack',
-                                                'git-upload-pack'):
-            return False
-        if config.git_dir:
-            command[0] = os.path.join(config.git_dir, command[0])
-        return True
-
+        self.app.logger.info('Command execute finished')

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # most code is stolen from http://goo.gl/qTpR3
 
 import logging
