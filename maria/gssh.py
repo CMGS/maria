@@ -118,7 +118,7 @@ class GSSHServer(object):
             command[0] = os.path.join(self.config.git_path, command[0])
         return True
 
-    def get_permission(self, cmd, rpc):
+    def get_permission(self, cmd):
         if cmd == 'git-receive-pack':
             return 'write'
         if cmd == 'git-upload-pack':
@@ -175,6 +175,10 @@ class GSSHServerInterface(paramiko.ServerInterface):
         self.ssh_key = key
         if not self.app.check_ssh_key(key):
             return paramiko.AUTH_FAILED
+        if hasattr(self.app, '_get_user_handler'):
+            self.username = self.app._get_user_handler(self.ssh_username, self.ssh_key)
+            if not self.username:
+                return paramiko.AUTH_FAILED
         return paramiko.AUTH_SUCCESSFUL
 
     # not paramiko method
@@ -197,16 +201,13 @@ class GSSHServerInterface(paramiko.ServerInterface):
             if not self.app.check_git_command(command):
                 return False
 
-            if hasattr(self.app, '_get_user_handler'):
-                self.username = self.app._get_user_handler(self.ssh_username, self.ssh_key)
-
             if hasattr(self.app, '_has_permission_handler'):
                 perm = self.app.get_permission(command[0])
                 if not self.app._has_permission_handler(self.username, repo, perm):
                     return False
 
         except Exception as e:
-            self.message = e
+            self.message = str(e)
             if self.check_error_message(channel):
                 return True
             return False
@@ -216,6 +217,8 @@ class GSSHServerInterface(paramiko.ServerInterface):
 
         if hasattr(self.app, '_get_repo_path_handler'):
             repo = self.app._get_repo_path_handler(repo)
+        else:
+            repo = os.path.join(self.app.config.project_root, repo)
 
         command.append(repo)
         self.command = command
@@ -265,6 +268,7 @@ class GSSHServerInterface(paramiko.ServerInterface):
         if err:
             channel.sendall_stderr(err)
         channel.send_exit_status(p.returncode)
-        channel.shutdown(2)
-        channel.close()
+        if not channel.recv(4):
+            channel.shutdown(2)
+            channel.close()
         self.app.logger.info('Command execute finished')
