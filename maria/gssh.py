@@ -61,7 +61,7 @@ class GSSHServer(object):
         logging.BASIC_FORMAT = "%(asctime)s [%(name)s] %(message)s"
         logging.basicConfig(level=level)
         if self.config.log_file:
-            paramiko.util.log_to_file(self.onfig.log_file, level=level)
+            paramiko.util.log_to_file(self.config.log_file, level=level)
 
     def init_key(self):
         path = os.path.realpath(self.config.host_key_path)
