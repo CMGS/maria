@@ -7,7 +7,6 @@ from os import access
 from os.path import join, exists, getmtime, getsize
 from urllib import unquote
 from .git import Git
-from .config import config
 from .date import format_date_time
 
 HTTP_STATUS = {
