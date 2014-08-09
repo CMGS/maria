@@ -93,3 +93,29 @@ def load_class(uri, default="GSSHServer", section="maria.gssh"):
                                                            exc))
 
         return getattr(mod, klass)
+
+def import_app(module):
+    parts = module.split(":", 1) #str.split([sep[, maxsplit]])
+    if len(parts) == 1:
+        module, obj = module, "application"
+    else:
+        module, obj = parts[0], parts[1]
+
+    try: 
+        __import__(module)
+    except ImportError:
+        raise ImportError("Failed to import application")
+
+    mod = sys.modules[module]
+
+    try:
+        app = eval(obj, mod.__dict__)
+    except NameError:
+        raise Exception("Failed to find application: %r" % module)
+
+    if app is None:
+        raise Exception("Failed to find application object: %r" % obj)
+
+    if not callable(app):
+        raise Exception("Application object must be callable.")
+    return app
