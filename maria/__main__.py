@@ -2,8 +2,9 @@
 
 import logging
 import paramiko
-from maria.config import Config
-from maria.loader import load_class, import_app
+from maria import Maria
+from maria.config import Config 
+from maria.loader import load, load_class
 from maria.colorlog import ColorizingStreamHandler
 
 __all__ = ['main']
@@ -15,7 +16,8 @@ class Application(object):
         self.usage = usage
         self.prog = prog
         self.config = None
-        self.logger = logging.getLogger(__name__) 
+        self.app = None
+        self.logger = logging.getLogger(self.__class__.__name__) 
         self.load_config()
 
     def init_log(self):
@@ -29,28 +31,47 @@ class Application(object):
             paramiko.util.log_to_file(self.config.log_file, level=level)
 
     def load_config(self):
-        self.config = Config(self.usage, prog=self.prog)
+        self.config = Config(usage=self.usage, prog=self.prog)
         parser = self.config.parse()
         args = parser.parse_args()
-        self.config.settings.load_settings(args)
+        self.config.load_options(args)
         self.init_log()
-
-        if len(args.args) < 1:
-            self.logger.info("No application module specified, using default maria.gssh:GSSHServer")
-            self.config.app_uri = 'maria.gssh:GSSHServer'
-        else:
-            self.config.app_uri = args.args[0]
     
-    def load_app(self):
-        return import_app(self.config.app_uri)
+        # load xxx.xxx:app 
+        if len(args.apps) < 1:
+            self.logger.info('No application module specified, using default setting')
+            app = load('maria.gssh.GSSHServer')
+            self.app = app(config=self.config)
+        else:
+            app = load(args.apps[0])
+            # command line options has priority over the app's
+            for key in dir(args):
+                if key.startswith('_') or key == 'apps':
+                    continue
+                cmd_conf = getattr(args, key)
+                app_conf = getattr(app.config, key)
+                if cmd_conf == app_conf:
+                    continue
+                setattr(app.config, key, cmd_conf)
+                if key == 'host_key_path':
+                    self.logger.info('host key path got changed by command line')
+                    app.init_key()
+            self.app = app
+            self.config.worker = app.config.worker
 
+    # choose worker
     def load_worker(self):
-        return load_class(self.config.worker_class)
+        if self.config.worker == 'sync':
+            return load('maria.worker.socket.SocketServer')
+        elif self.config.worker == 'async':
+            return load('maria.worker.ggevent.GeventServer')
+        else:
+            raise Exception('Invalid Worker!')
 
     def run(self):
         server = self.load_worker()
-        app = self.load_app()
-        return server(self.config.bind, app(config=self.config)).run()
+        addr = self.app.config.get_addr()
+        return server(addr, self.app).run()
 
 
 def main():
