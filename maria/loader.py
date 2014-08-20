@@ -43,46 +43,21 @@ relative import to an absolute import.
         __import__(name)
         return sys.modules[name]
 
-def load_class(uri, default="GSSHServer", section="maria.gssh"):
+def load(uri):
+    parts = uri.split(":", 1) #str.split([sep[, maxsplit]])
+    if len(parts) == 1:
+        return load_class(parts[0])
+    elif len(parts) == 2:
+        module, obj = parts[0], parts[1]
+        return load_app(module, obj)
+    else:
+        raise Exception("load error: uri is invalid")
+
+def load_class(uri, default="maria.worker.socket.SocketServer"):
     if inspect.isclass(uri):
         return uri
-    if uri.startswith("egg:"):
-        # uses entry points
-        entry_str = uri.split("egg:")[1]
-        try:
-            dist, name = entry_str.rsplit("#", 1)
-        except ValueError:
-            dist = entry_str
-            name = default
-
-        try:
-            return pkg_resources.load_entry_point(dist, section, name)
-        except:
-            exc = traceback.format_exc()
-            raise RuntimeError("class uri %r invalid "
-                               "or not found: \n\n[%s]" % (uri,
-                                                           exc))
-    elif uri.startswith("file:"):
-        path, klass = uri.split('file:')[1].rsplit('#')
-        path = os.path.realpath(path)
-        module = path.rsplit('/',1)[-1].strip('.py')
-        mod = imp.load_source('%s.%s' % (module, klass), path)
-        return getattr(mod, klass)
     else:
         components = uri.split('.')
-        if len(components) == 1:
-            try:
-                if uri.startswith("#"):
-                    uri = uri[1:]
-
-                return pkg_resources.load_entry_point("maria",
-                                                      section, uri)
-            except:
-                exc = traceback.format_exc()
-                raise RuntimeError("class uri %r invalid "
-                                   "or not found: \n\n[%s]" % (uri,
-                                                               exc))
-
         klass = components.pop(-1)
         try:
             mod = import_module('.'.join(components))
@@ -93,17 +68,12 @@ def load_class(uri, default="GSSHServer", section="maria.gssh"):
                                                            exc))
 
         return getattr(mod, klass)
-
-def import_app(module):
-    parts = module.split(":", 1) #str.split([sep[, maxsplit]])
-    if len(parts) == 1:
-        module, obj = module, "application"
-    else:
-        module, obj = parts[0], parts[1]
-
+    
+def load_app(module, obj):
+    sys.path.insert(0, os.getcwd())
     try: 
         __import__(module)
-    except ImportError:
+    except:
         raise ImportError("Failed to import application")
 
     mod = sys.modules[module]
