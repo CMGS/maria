@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -
 
 try:
-    import gevent
+    from gevent.monkey import patch_all
+    patch_all(subprocess=False, aggressive=False)
+    from gevent.server import StreamServer
 except ImportError:
     raise RuntimeError("You need install gevent")
 
-from gevent.monkey import patch_all
-patch_all(subprocess=False, aggressive=False)
-from gevent.server import StreamServer
 from maria.worker.base import WorkerClass
 
 
