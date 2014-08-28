@@ -19,7 +19,7 @@ def populate_argument_parser(parser):
     parser.add_argument("--debug", default=False, dest="debug",
                         action="store_true",
                         help="debug")
-    parser.add_argument("--log-file", default="/tmp/maria.log", dest="log_file",
+    parser.add_argument("--log-file", default="./maria.log", dest="log_file",
                         help="log file path")
     parser.add_argument("--auth-timeout", default=20, dest="auth_timeout",
                         type=int,
@@ -45,7 +45,7 @@ class Config(object):
         self.git_path = '/usr/bin'
         self.project_root = ''
         self.debug = False
-        self.log_file = '/tmp/maria.log'
+        self.log_file = './maria.log'
         self.auth_timeout = 20
         self.check_timeout = 10
         self.select_timeout = 10
