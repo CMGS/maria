@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
 
-import os
 import time
 import subprocess
 import maria
+import unittest
 
 
-class TestMaria():
+class TestMaria(unittest.TestCase):
     
     def setUp(self):
         self.git_bare = '~/temp_bare.git'
         self.git_repo = '~/temp_repo.git'
 
-        os.system('mkdir %s; \
-                   cd %s; \
-                   git init --bare' %
-                   (self.git_bare, self.git_bare))
-
+        cmd = './git_init_bare.sh ' + self.git_bare
+        status = subprocess.call(cmd, shell=True)
+        assert status != 1, 'temp git_bare path existed!'
+        assert status == 0, 'temp git_bare init error!'
+        
         args = ['maria',
                 '-k', '../examples/host.key',
                 '-b', '127.0.0.1:2200']
@@ -25,23 +25,25 @@ class TestMaria():
 
     def tearDown(self):
         self.p.terminate()
-        os.system('rm %s %s -rf' % (self.git_bare, self.git_repo))
+        cmd = 'rm %s %s -rf' % (self.git_bare, self.git_repo)
+        status = subprocess.call(cmd, shell=True)
+        assert status == 0, 'delete temp git repos error!'
 
     def test_clone(self):
-        cmd = 'git clone git@127.0.0.1:%s %s' % (self.git_bare, self.git_repo)
-        pclone=subprocess.Popen(cmd, shell=True)
-        assert pclone.wait() == 0
+        cmd = 'git clone git@127.0.0.1:%s %s' \
+               % (self.git_bare, self.git_repo)
+        pclone = subprocess.Popen(cmd, shell=True)
+        assert pclone.wait() == 0, 'git clone error!'
 
     def test_push(self):
-        cmd = 'mkdir %s; \
-               cd %s; \
-               git init;\
-               touch test.c; \
-               git add test.c; \
-               git commit -m "Add test.c"; \
-               git remote add origin git@127.0.0.1:%s; \
-               git push origin master' \
-               % (self.git_repo, self.git_repo, self.git_bare)
-        ppush=subprocess.Popen(cmd, shell=True)
-        assert ppush.wait() == 0
+        cmd = './git_init_repo.sh ' \
+              + self.git_repo + ' ' + self.git_bare
+        ppush = subprocess.Popen(cmd, shell=True)
+        status = ppush.wait()
+        assert status != 1, 'temp git_bare path does not exist!'
+        assert status != 2, 'temp git_repo path existed!'
+        assert status == 0, 'git push error!'
 
+
+if __name__ == "__main__":
+    unittest.main()
