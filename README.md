@@ -22,12 +22,24 @@ pip install -r requirements
 python setup.py develop
 ```
 
-Then, you can find example in examples dir. In simple case, ``run-maria`` will start Maria System.  
-You also can specify options by yourself like ``run-maria --debug`` or ``run-maria -p 22 --host 0.0.0.0``.  
-Get options define use this command ``run-maria -h``.  
-And ``run-maria --host-key=./examples/host.key -i file:./examples/ssh_interface.py#NGSSHInterface`` will start maria system with all examples.
+Then, you can find example in examples dir. In simple case, ``maria`` will start Maria System.  
+You also can specify options by yourself like ``maria --debug`` or ``maria -b 0.0.0.0:2200``.  
+Get options define use this command ``maria -h``.  
+And ``maria -k host.key -b 127.0.0.1:2200 -w async run_socket:app`` will start maria system with all examples.
 
 Anyway, I think single process will be ok in production environment with supervisord or something like that.  
+
+## Test
+
+First, nosetests is required. Get it:
+```bash
+# pip install nose
+```
+Then, this will run tests:
+```bash
+$ cd /path/to/maria/tests
+$ nosetests -v
+```
 
 ## Maybe a bug
 
