@@ -31,6 +31,13 @@ Anyway, I think single process will be ok in production environment with supervi
 
 ## Test
 
+### with unittest
+```bash
+$ cd /path/to/maria/tests
+$ python test_maria.py
+```
+
+### or with nose
 First, nosetests is required. Get it:
 ```bash
 # pip install nose
