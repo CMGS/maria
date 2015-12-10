@@ -1,8 +1,9 @@
-#coding:utf-8
+# -*- coding: utf-8 -*-
 
 import os
-import subprocess
 import shlex
+import select
+import subprocess
 from contextlib import contextmanager
 
 
@@ -14,16 +15,40 @@ def chdir(dir):
     os.chdir(cwd)
 
 
+def callback(p):
+    ofd = p.stdout.fileno()
+    efd = p.stderr.fileno()
+    while True:
+        r_ready, w_ready, x_ready = select.select([ofd, efd], [], [], 30)
+
+        if ofd in r_ready:
+            data = os.read(ofd, 8192)
+            if not data:
+                break
+            yield data
+
+        if efd in r_ready:
+            data = os.read(efd, 8192)
+            yield data
+            break
+
+    output, err = p.communicate()
+    if output:
+        yield output
+        if err:
+            yield err
+
+
 class Git(object):
 
-    def __init__(self, path=None):
-        self.git_path = path if path else 'git'
+    def __init__(self, dir=''):
+        self.git_path = os.path.join(dir, 'git')
 
     @property
     def command_options(self):
         return {"advertise_refs": "--advertise-refs"}
 
-    def command(self, cmd, opts={}, callback=None, env=None):
+    def command(self, cmd, opts={}, env=None):
         cmd = "%s %s %s" % (self.git_path, cmd, " ".join(opts.get("args")))
         cmd = shlex.split(cmd)
         p = subprocess.Popen(cmd,
@@ -32,15 +57,12 @@ class Git(object):
                              stderr=subprocess.PIPE,
                              close_fds=True,
                              env=env)
-        if callback:
-            data = opts.get("msg")
-            if data:
-                p.stdin.write(data)
-            return callback(p)
-        result, err = p.communicate()
-        return result
+        data = opts.get("msg")
+        if data:
+            p.stdin.write(data)
+        return callback(p)
 
-    def upload_pack(self, repository_path, opts=None, callback=None, env=None):
+    def upload_pack(self, repository_path, opts=None, env=None):
         cmd = "upload-pack"
         args = []
         if not opts:
@@ -51,10 +73,9 @@ class Git(object):
         args.append("--stateless-rpc")
         args.append(repository_path)
         opts["args"] = args
-        return self.command(cmd, opts, callback, env=env)
+        return self.command(cmd, opts, env=env)
 
-    def receive_pack(self, repository_path, opts=None, callback=None,
-                     env=None):
+    def receive_pack(self, repository_path, opts=None, env=None):
         cmd = "receive-pack"
         args = []
         if not opts:
@@ -65,10 +86,9 @@ class Git(object):
         args.append("--stateless-rpc")
         args.append(repository_path)
         opts["args"] = args
-        return self.command(cmd, opts, callback, env=env)
+        return self.command(cmd, opts, env=env)
 
-    def update_server_info(self, repository_path, opts=None, callback=None,
-                           env=None):
+    def update_server_info(self, repository_path, opts=None, env=None):
         cmd = "update-server-info"
         args = []
         if not opts:
@@ -78,7 +98,7 @@ class Git(object):
                 args.append(self.command_options.get(k))
         opts["args"] = args
         with chdir(repository_path):
-            self.command(cmd, opts, callback, env=env)
+            self.command(cmd, opts, env=env)
 
     def get_config_setting(self, repository_path, key):
         # TODO: user pygit2 or ellen

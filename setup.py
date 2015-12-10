@@ -1,5 +1,5 @@
-#!/usr/local/bin/python2.7
-#coding:utf-8
+# -*- coding: utf-8 -*-
+
 import os
 from setuptools import setup, find_packages
 
@@ -19,11 +19,11 @@ MODULES = []
 PACKAGES = find_packages(exclude=['tests.*', 'tests', 'examples.*', 'examples'])
 ENTRY_POINTS = """
 [console_scripts]
-run-maria = maria.run:main
+maria = maria.__main__:main
 """
 
 # dependencies
-INSTALL_REQUIRES = []
+INSTALL_REQUIRES = ["paramiko>=1.12.0"]
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -51,5 +51,7 @@ setup(
     zip_safe=False,
     entry_points=ENTRY_POINTS,
     install_requires=INSTALL_REQUIRES,
+    extras_require={
+        "gevent": ["Cython>=0.20.1", "gevent>=1.1"],
+    },
 )
-

@@ -1,41 +1,22 @@
-#!/usr/bin/python
-#coding:utf-8
+# -*- coding: utf-8 -*-
 
 import os
 import re
 import time
-import select
 from os import access
 from os.path import join, exists, getmtime, getsize
 from urllib import unquote
-from maria.libs.date import format_date_time
-from maria.libs.git import Git
-from maria.libs.auth import decode, DecodeError
-from maria.config import config
+from .git import Git
+from .date import format_date_time
 
-
-def callback(p):
-    ofd = p.stdout.fileno()
-    efd = p.stderr.fileno()
-    while True:
-        r_ready, w_ready, x_ready = select.select([ofd, efd], [], [], 30)
-
-        if ofd in r_ready:
-            data = os.read(ofd, 8192)
-            if not data:
-                break
-            yield data
-
-        if efd in r_ready:
-            data = os.read(efd, 8192)
-            yield data
-            break
-
-    output, err = p.communicate()
-    if output:
-        yield output
-        if err:
-            yield err
+HTTP_STATUS = {
+    200: "200 OK",
+    400: "400 Bad Request",
+    401: "401 Unauthorized",
+    403: "403 Forbidden",
+    404: "404 Not Found",
+    405: "405 Method not allowed",
+}
 
 
 class GHTTPServer(object):
@@ -43,100 +24,58 @@ class GHTTPServer(object):
     VALID_SERVICE_TYPES = ['upload-pack', 'receive-pack']
 
     SERVICES = [
-        ["POST",
-         'service_rpc',
-         re.compile("(.*?)/git-upload-pack$"),
-         'upload-pack'],
-        ["POST",
-         'service_rpc',
-         re.compile("(.*?)/git-receive-pack$"),
-         'receive-pack'],
+        ["POST", 'service_rpc',      re.compile("(.*?)/git-upload-pack$"),  'upload-pack'],
+        ["POST", 'service_rpc',      re.compile("(.*?)/git-receive-pack$"), 'receive-pack'],
 
-        ["GET",
-         'get_info_refs',
-         re.compile("(.*?)/info/refs$")],
-        ["GET",
-         'get_text_file',
-         re.compile("(.*?)/HEAD$")],
-        ["GET",
-         'get_text_file',
-         re.compile("(.*?)/objects/info/alternates$")],
-        ["GET",
-         'get_text_file',
-         re.compile("(.*?)/objects/info/http-alternates$")],
-        ["GET",
-         'get_info_packs',
-         re.compile("(.*?)/objects/info/packs$")],
-        ["GET",
-         'get_text_file',
-         re.compile("(.*?)/objects/info/[^/]*$")],
-        ["GET",
-         'get_loose_object',
-         re.compile("(.*?)/objects/[0-9a-f]{2}/[0-9a-f]{38}$")],
-        ["GET",
-         'get_pack_file',
-         re.compile("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.pack$")],
-        ["GET",
-         'get_idx_file',
-         re.compile("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.idx$")],
+        ["GET",  'get_info_refs',    re.compile("(.*?)/info/refs$")],
+        ["GET",  'get_text_file',    re.compile("(.*?)/HEAD$")],
+        ["GET",  'get_text_file',    re.compile("(.*?)/objects/info/alternates$")],
+        ["GET",  'get_text_file',    re.compile("(.*?)/objects/info/http-alternates$")],
+        ["GET",  'get_info_packs',   re.compile("(.*?)/objects/info/packs$")],
+        ["GET",  'get_text_file',    re.compile("(.*?)/objects/info/[^/]*$")],
+        ["GET",  'get_loose_object', re.compile("(.*?)/objects/[0-9a-f]{2}/[0-9a-f]{38}$")],
+        ["GET",  'get_pack_file',    re.compile("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.pack$")],
+        ["GET",  'get_idx_file',     re.compile("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.idx$")],
     ]
 
-    def __init__(self):
-        self.headers = {}
-        self.interface = None
-        self.git = Git(config.git_path)
+    def __init__(self, config=None):
+        self.set_config(config)
+        self.git = Git(self.config.get('git_path'))
+
+    def set_config(self, config):
+        self.config = config or {}
+
+    def set_config_setting(self, key, value):
+        self.config[key] = value
 
     def __call__(self, environ, start_response):
+        if hasattr(self, '_before_request_handler'):
+            self._before_request_handler(environ)
         self.headers = {}
         self.env = environ
-        self.interface = config.ghttp_interface()
         body = self.call()
         start_response(self.status, self.headers.items())
+        if hasattr(self, '_after_request_handler'):
+            self._after_request_handler(environ)
         return body
 
-    def check_auth(self):
-        authorization = self.env.get('HTTP_AUTHORIZATION')
-        if not authorization:
-            return True
-        try:
-            username, password = decode(authorization)
-        except DecodeError:
-            return None
-        if not self.interface.check_user(username):
-            return None
-        if not self.interface.check_password(password):
-            return None
-        return True
-
-    def check_repo(self, path):
-        if self.interface.check_repo(path):
-            return True
-
-    def check_command(self, cmd, rpc):
-        if cmd == 'service_rpc':
-            command = rpc
-        else:
-            command = cmd
-        if self.interface.check_command(command):
-            return True
-
     def call(self):
-        if not self.check_auth():
-            return self.render_no_authorization()
         match = self.match_routing(self.env["PATH_INFO"].lstrip('/'),
                                    self.env["REQUEST_METHOD"])
         if not match:
             return self.render_not_found()
         cmd, path, reqfile, rpc = match
-        if not self.check_repo(path):
-            return self.render_no_access()
-        if not self.check_command(cmd, rpc):
-            return self.render_no_access()
-        self.git_env = self.interface.get_env()
         self.rpc = rpc
         self.reqfile = reqfile
         if cmd == "not_allowed":
             return self.render_method_not_allowed()
+
+        if hasattr(self, '_has_permission_handler'):
+            need_perm = self.get_permission(cmd, rpc)
+            has_perm = self._has_permission_handler(self.env, path, need_perm)
+            if not has_perm:
+                return self.render_no_access()
+
         self.dir = self.get_git_dir(path)
         if not self.dir:
             return self.render_not_found()
@@ -147,33 +86,25 @@ class GHTTPServer(object):
         if not self.has_access(self.rpc, True):
             return self.render_no_access()
         input = self.read_body
-        git_cmd = "upload_pack" \
-            if self.rpc == "upload-pack" else "receive_pack"
-        self.status = "200"
+        git_cmd = "upload_pack" if self.rpc == "upload-pack" else "receive_pack"
+        self.status = HTTP_STATUS[200]
         self.headers["Content-Type"] = "application/x-git-%s-result" % self.rpc
-        return getattr(self.git, git_cmd)(self.dir,
-                                          {"msg": input},
-                                          callback,
-                                          env=self.git_env)
+        env = self.env.get('env')
+        return getattr(self.git, git_cmd)(self.dir, {"msg": input, "env": env})
 
     def get_info_refs(self):
         service_name = self.get_service_type()
         if self.has_access(service_name):
-            git_cmd = "upload_pack" \
-                if service_name == "upload-pack" else "receive_pack"
-            refs = getattr(self.git, git_cmd)(self.dir,
-                                              {"advertise_refs": True},
-                                              env=self.git_env)
-            self.status = "200"
-            self.headers["Content-Type"] = \
-                "application/x-git-%s-advertisement" % service_name
+            git_cmd = "upload_pack" if service_name == "upload-pack" else "receive_pack"
+            refs = getattr(self.git, git_cmd)(self.dir, {"advertise_refs": True})
+            self.status = HTTP_STATUS[200]
+            self.headers["Content-Type"] = "application/x-git-%s-advertisement" % service_name
             self.hdr_nocache()
 
             def read_file():
                 yield self.pkt_write("# service=git-%s\n" % service_name)
                 yield self.pkt_flush
                 yield refs
-
             return read_file()
         else:
             return self.dumb_info_refs()
@@ -183,28 +114,20 @@ class GHTTPServer(object):
 
     def dumb_info_refs(self):
         self.update_server_info()
-        return self.send_file(self.reqfile,
-                              "text/plain; charset=utf-8")
+        return self.send_file(self.reqfile, "text/plain; charset=utf-8")
 
     def get_info_packs(self):
         # objects/info/packs
-        return self.send_file(self.reqfile,
-                              "text/plain; charset=utf-8")
+        return self.send_file(self.reqfile, "text/plain; charset=utf-8")
 
     def get_loose_object(self):
-        return self.send_file(self.reqfile,
-                              "application/x-git-loose-object",
-                              cached=True)
+        return self.send_file(self.reqfile, "application/x-git-loose-object", cached=True)
 
     def get_pack_file(self):
-        return self.send_file(self.reqfile,
-                              "application/x-git-packed-objects",
-                              cached=True)
+        return self.send_file(self.reqfile, "application/x-git-packed-objects", cached=True)
 
     def get_idx_file(self):
-        return self.send_file(self.reqfile,
-                              "application/x-git-packed-objects-toc",
-                              cached=True)
+        return self.send_file(self.reqfile, "application/x-git-packed-objects-toc", cached=True)
 
     def get_service_type(self):
         def get_param():
@@ -244,7 +167,7 @@ class GHTTPServer(object):
         if not exists(reqfile) or not access(reqfile, os.R_OK):
             return self.render_not_found()
 
-        self.status = "200"
+        self.status = HTTP_STATUS[200]
         self.headers["Content-Type"] = content_type
         self.headers["Last-Modified"] = format_date_time(getmtime(reqfile))
 
@@ -264,7 +187,6 @@ class GHTTPServer(object):
                         if not part:
                             break
                         yield part
-
             return read_file()
         else:
             with open(reqfile, "rb") as f:
@@ -276,8 +198,31 @@ class GHTTPServer(object):
         self.git.update_server_info(self.dir)
 
     @property
+    def read_chunked_body(self):
+        # wsgiref with no chunked support
+        environ = self.env
+        input = environ.get('wsgi.input')
+        length = environ.get('CONTENT_LENGTH', '0')
+        length = 0 if length == '' else int(length)
+        body = ''
+        if length == 0:
+            if input is None:
+                return
+            if environ.get('HTTP_TRANSFER_ENCODING', '0') == 'chunked':
+                size = int(input.readline(), 16)
+                while size > 0:
+                    body += input.read(size)
+                    input.read(2)
+                    size = int(input.readline(), 16)
+        else:
+            body = input.read(length)
+        return body
+
+    @property
     def read_body(self):
-        input = self.env["wsgi.input"]
+        if self.config.get('chunked'):
+            return self.read_chunked_body
+        input = self.env.get('wsgi.input')
         return input.read()
 
     # ------------------------------
@@ -320,37 +265,36 @@ class GHTTPServer(object):
     def render_method_not_allowed(self):
         env = []
         if env["SERVER_PROTOCOL"] == "HTTP/1.1":
-            self.status = "405"
+            self.status = HTTP_STATUS[405]
             self.headers["Content-Type"] = "text/plain"
             return ["Method Not Allowed"]
         else:
-            self.status = "400"
+            self.status = HTTP_STATUS[400]
             self.headers["Content-Type"] = "text/plain"
             return ["Bad Request"]
 
     def render_not_found(self):
-        self.status = "404"
+        self.status = HTTP_STATUS[404]
         self.headers["Content-Type"] = "text/plain"
         return ["Not Found"]
 
     def render_no_access(self):
-        self.status = "403"
+        self.status = HTTP_STATUS[403]
         self.headers["Content-Type"] = "text/plain"
         return ["Forbidden"]
 
-    def render_no_authorization(self):
-        self.status = "401"
-        self.headers["Content-Type"] = "text/plain"
-        self.headers["WWW-Authenticate"] = "Basic realm=Protected"
-        return ["Unauthorized"]
-
     def has_access(self, rpc, check_content_type=False):
         if check_content_type:
-            if self.env["CONTENT_TYPE"] \
-                    != "application/x-git-%s-request" % rpc:
+            if self.env["CONTENT_TYPE"] != "application/x-git-%s-request" % rpc:
                 return False
         if rpc not in self.VALID_SERVICE_TYPES:
             return False
+        if rpc == 'receive-pack':
+            if "receive_pack" in self.config:
+                return self.config.get("receive_pack")
+        if rpc == 'upload-pack':
+            if "upload_pack" in self.config:
+                return self.config.get("upload_pack")
         return self.get_config_setting(rpc)
 
     def get_config_setting(self, service_name):
@@ -363,6 +307,8 @@ class GHTTPServer(object):
             return setting == 'true'
 
     def get_git_dir(self, path):
+        if hasattr(self, '_get_repo_path_handler'):
+            return self._get_repo_path_handler(self.env, path)
         root = self.get_project_root()
         path = join(root, path)
         if not self.is_subpath(path, root):
@@ -372,7 +318,7 @@ class GHTTPServer(object):
         return False
 
     def get_project_root(self):
-        root = config.repos_path or os.getcwd()
+        root = self.config.get("project_root") or os.getcwd()
         return root
 
     def is_subpath(self, path, checkpath):
@@ -383,42 +329,31 @@ class GHTTPServer(object):
         if re.match("^%s(\/|$)" % checkpath, path):
             return True
 
+    # decorator hook
 
-class GHTTPInterface(object):
+    # args: environ
+    def before_request(self, f):
+        self._before_request_handler = f
+        return f
 
-    def __init__(self):
-        self.message = ''
-        self.username = ''
-        self.password = ''
-        self.repo = ''
-        self.command = ''
+    # args: environ
+    def after_request(self, f):
+        self._after_request_handler = f
+        return f
 
-    def check_user(self, name):
-        self.username = name
-        return True
+    # args: environ, path
+    def get_repo_path(self, f):
+        self._get_repo_path_handler = f
+        return f
 
-    def check_password(self, password):
-        self.password = password
-        return True
+    # args: environ, path, perm
+    def has_permission(self, f):
+        self._has_permission_handler = f
+        return f
 
-    def check_repo(self, repo):
-        self.repo = repo
-        return True
-
-    def check_command(self, cmd):
-        # upload-pack
-        # receive-pack
-        # get_info_refs
-        # get_text_file
-        # get_info_packs
-        # get_loose_object
-        # get_pack_file
-        # get_idx_file
-        self.command = cmd
-        return True
-
-    def get_env(self):
-        return None
-
-    def get_repo_path(self):
-        return None
+    def get_permission(self, cmd, rpc):
+        if cmd != 'service_rpc':
+            return 'read'
+        if rpc == 'upload-pack':
+            return 'read'
+        return 'write'
