@@ -2,10 +2,8 @@
 
 import os
 import sys
-import imp
 import inspect
 import traceback
-import pkg_resources
 
 try:
     from importlib import import_module
@@ -68,7 +66,7 @@ def load_class(uri, default="maria.worker.socket.SocketServer"):
                                                            exc))
 
         return getattr(mod, klass)
-    
+
 def load_app(module, obj):
     sys.path.insert(0, os.getcwd())
     try: 

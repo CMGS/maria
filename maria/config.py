@@ -2,7 +2,7 @@
 
 import os
 import sys
-import argparse 
+import argparse
 
 
 def populate_argument_parser(parser):
@@ -49,8 +49,8 @@ class Config(object):
         self.auth_timeout = 20
         self.check_timeout = 10
         self.select_timeout = 10
-    
-    # set the config options by args 
+
+    # set the config options by args
     def load_options(self, args):
         for key in dir(args):
             if key.startswith('_') or key == 'apps':
@@ -75,13 +75,14 @@ class Config(object):
     def get_addr(self):
         addr = self.bind.split(':')
         if len(addr) is not 2:
-            raise ValueError('Unrecognized argument value: "%s"' % args.bind)
+            raise ValueError('Unrecognized argument value: "%s"' % self.bind)
         return (addr[0], int(addr[1]))
 
     def get(self, key):
-        if key not in self:
+        value = getattr(self, key, None)
+        if not value:
             raise AttributeError("No configuration setting for: %s" % key)
-        return settings.__getattribute__(self, key)
+        return value
 
 
 config = Config()

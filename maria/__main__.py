@@ -2,9 +2,8 @@
 
 import logging
 import paramiko
-from maria import Maria
-from maria.config import Config 
-from maria.loader import load, load_class
+from maria.loader import load
+from maria.config import Config
 from maria.colorlog import ColorizingStreamHandler
 
 __all__ = ['main']
@@ -12,12 +11,12 @@ __all__ = ['main']
 
 class Application(object):
 
-    def __init__(self, usage=None, prog=None): 
+    def __init__(self, usage=None, prog=None):
         self.usage = usage
         self.prog = prog
         self.config = None
         self.app = None
-        self.logger = logging.getLogger(self.__class__.__name__) 
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.load_config()
 
     def init_log(self):
@@ -36,8 +35,8 @@ class Application(object):
         args = parser.parse_args()
         self.config.load_options(args)
         self.init_log()
-    
-        # load xxx.xxx:app 
+
+        # load xxx.xxx:app
         if len(args.apps) < 1:
             self.logger.info('No application module specified, using default setting')
             app = load('maria.gssh.GSSHServer')

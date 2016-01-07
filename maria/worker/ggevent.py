@@ -2,7 +2,7 @@
 
 try:
     from gevent.monkey import patch_all
-    patch_all(subprocess=False, aggressive=False)
+    patch_all()
     from gevent.server import StreamServer
 except ImportError:
     raise RuntimeError("You need install gevent")

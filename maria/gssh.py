@@ -238,7 +238,7 @@ class GSSHServerInterface(paramiko.ServerInterface):
 
         ofd = p.stdout.fileno()
         efd = p.stderr.fileno()
-
+        p.stdin.flush()
         while True:
             r_ready, w_ready, x_ready = select.select([channel, ofd, efd],
                                                       [],
