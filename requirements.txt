@@ -1,3 +1,3 @@
-ecdsa==0.11
-paramiko==1.12.2
-pycrypto==2.6.1
+ecdsa
+paramiko
+pycrypto
