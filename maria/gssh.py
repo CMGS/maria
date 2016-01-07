@@ -161,6 +161,9 @@ class GSSHServerInterface(paramiko.ServerInterface):
     def get_allowed_auths(self, username):
         return 'publickey'
 
+    def check_auth_none(self, username):
+        return paramiko.AUTH_FAILED
+
     def check_channel_request(self, kind, chanid):
         if kind == 'session':
             return paramiko.OPEN_SUCCEEDED
@@ -272,3 +275,4 @@ class GSSHServerInterface(paramiko.ServerInterface):
             channel.shutdown(2)
             channel.close()
         self.app.logger.info('Command execute finished')
+
