@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from paramiko.util import hexify
+from binascii import hexlify
 
 
 def hex_key(key):
-    return hexify(key.get_fingerprint())
+    return hexlify(key.get_fingerprint()).upper()
+
